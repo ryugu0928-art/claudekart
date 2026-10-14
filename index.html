@@ -4119,11 +4119,26 @@ function sense(o,dt){const P=o.P3,U=o.U3,F=o.F3;_X.crossVectors(U,F);let n=0,dn=
   U.lerp(_n,1-Math.exp(-dt*16)).normalize();F.addScaledVector(U,-F.dot(U)).normalize();return true;}
 /* 【追加】グライダーパネルは「通過すると展開する」仕掛け：段差が低くて接地が切れなくても、パネル(空中ゲート)通過で展開する。調整は D3_GLPANEL */
 const D3_GLPANEL={on:true,upR:.3,t:1,minV:3};   // upR:展開時の上向き初速(滑空速度比。ゲーム内の沈下は約0.69倍/秒と速いので低いと即着地する) t:その初速を0へ減衰させつつ接地判定を無視する秒数 minV:展開に必要な最低速度
-function d3GlStart(o){o.glide=true;o.gs=glFrom(o);o.gv=o.v;o._dp=(o===st)&&!!((phase==='race'?GK:ZK).drift);o.lowT=0;o.lowDone=false;o.roll=0;o.gu=0;o.gth=0;o.gvs=0;o._gdy=null;if(o===st)GLLOG.length=0;d3Ev(o,'glide');if(o===st)$t('グライダー展開！ '+o.gs.name+'（'+o.gs.grp+'系・空中速度Lv'+o.gs.sl+'／操作Lv'+o.gs.hl+'）');o._glp=true;if(D3_GLPANEL.on){o._gForce=D3_GLPANEL.t;o.V3.addScaledVector(o.U3,D3_GLPANEL.upR*o.gv);}}   // 展開(通常の接地切れ/パネル通過とも)直後に打ち上げ：低い段差でも即着地しない
+function d3GlStart(o){o.glide=true;o.gs=glFrom(o);o.gv=o.v;o._dp=(o===st)&&!!((phase==='race'?GK:ZK).drift);o.lowT=0;o.lowDone=false;o.roll=0;o.gu=0;o.gth=0;o.gvs=0;o._gdy=null;if(o===st)GLLOG.length=0;d3Ev(o,'glide');if(o===st)$t('グライダー展開！ '+o.gs.name+'（'+o.gs.grp+'系・空中速度Lv'+o.gs.sl+'／操作Lv'+o.gs.hl+'）');o._glp=true;if(D3_GLPANEL.on){o._gForce=D3_GLPANEL.t;o.V3.addScaledVector(o.U3,D3_GLPANEL.upR*o.gv);}if(WORLD&&WORLD.id==='sweet'&&D3_CANNON.on)d3CannonStart(o);}   // 展開(通常の接地切れ/パネル通過とも)直後に打ち上げ：低い段差でも即着地しない／スイーツのグライダー板では大砲グライダー
 function d3GlPanel(o){if(!D3_GLPANEL.on||o.glide||o.fell)return;const ag=GT.findIndex(g=>g.air);if(ag<0)return;if(o.gi<ag-2)o._glp=false;
   if(o._glp||o.gi!==ag||o.v<D3_GLPANEL.minV)return;const g=GT[ag],P=o.P3;_t2.subVectors(P,g.c);if(_t2.length()>45||Math.abs(_t2.dot(g.x))>g.hw)return;
   o.fly=true;o.air3=0;o.V3.copy(o.F3).multiplyScalar(o.v);d3GlStart(o);}
-function d3Move(o,dt,slip){d3Init(o);const P=o.P3,U=o.U3,F=o.F3;
+/* 【追加】大砲グライダー（スイーツキャニオン：トンネル出口のグライダー板 → 円環の入口）。
+   参照した資料（Super Mario Wiki: Cannon）の確認済みの挙動だけを再現する：①高速で次のコース区間へ移動 ②空中操作は大きく制限（コース側が軌道を誘導）
+   ③飛行中に前方へ投げたアイテムは通常より速く遠くへ進む ④ミドリこうらは最初に壁へ当たると反射せず壊れる ⑤終端で速度が落ち、通常のグライダーに戻って着地。
+   ※内部の速度・高度の数値は資料では未確定のため、下の D3_CANNON は仮の値（調整用）。パーツの性能差は反映していない。 */
+const D3_CANNON={on:true,v:95,rise:45,end:7,lat:7,latRate:14,item:1.6};   // v:飛行速度 rise:弦から頂点までの高さ end:到着点の路面からの高さ lat:横にずらせる最大量 latRate:横移動の速さ item:投げたアイテムの速度倍率
+function d3CannonStart(o){const a=GT[SWEET_AIR],b=GT[SWEET_GAP[1]+1],C=o.cannon={t:0,lat:0,p0:a.c.clone(),p1:b.c.clone()};
+  C.p1.y+=D3_CANNON.end;const dx=C.p1.x-C.p0.x,dz=C.p1.z-C.p0.z;C.L=Math.hypot(dx,dz);C.dx=dx/C.L;C.dz=dz/C.L;C.T=C.L/D3_CANNON.v;
+  o.cn=true;o.fly=true;o.glide=true;o.fell=false;o.air3=0;o._gForce=0;if(o===st){$t('大砲グライダー！');blip(180,.25);}}
+function d3CannonStep(o,dt){const C=o.cannon,P=o.P3,F=o.F3,U=o.U3,Cn=D3_CANNON;C.t+=dt;const u=Math.min(1,C.t/C.T);
+  if(o===st)C.lat=clamp(C.lat+(st.steer||0)*Cn.latRate*dt,-Cn.lat,Cn.lat);   // 操作はわずかな横移動のみ（端では中央へ収束）
+  const off=C.lat*Math.sin(Math.PI*u),dy=C.p1.y-C.p0.y;
+  P.set(C.p0.x+(C.p1.x-C.p0.x)*u-C.dz*off,C.p0.y+dy*u+4*Cn.rise*u*(1-u),C.p0.z+(C.p1.z-C.p0.z)*u+C.dx*off);
+  o.V3.set(C.dx*Cn.v,(dy+4*Cn.rise*(1-2*u))/C.T,C.dz*Cn.v);F.copy(o.V3).normalize();U.set(0,1,0).addScaledVector(F,-F.y).normalize();
+  o.v=Cn.v;o.fly=true;o.glide=true;o.fell=false;o.air3=0;o.roll*=Math.max(0,1-dt*6);
+  if(u>=1){o.cannon=null;o.gu=0;if(o===st)$t('着地へ');}}   // 終端：以降は通常のグライダー物理（速度が落ちて着地）
+function d3Move(o,dt,slip){d3Init(o);const P=o.P3,U=o.U3,F=o.F3;if(!o.fly)o.cannon=null;
   if(o.glide&&o.fly&&o===st)o.h=o.h3;
   const dh=wrap(o.h-o.h3);o.h3=o.h;if(dh)rotAbout(F,U,dh);
   o.pp3.copy(P);
@@ -4131,6 +4146,7 @@ function d3Move(o,dt,slip){d3Init(o);const P=o.P3,U=o.U3,F=o.F3;
     if(!sense(o,dt)){o.fly=true;o.air3=0;o.V3.copy(_d).multiplyScalar(o.v);d3Ev(o,'lost');
       const ag=GT.findIndex(g=>g.air);if(ag>=0&&o.gi>=ag-2&&o.gi<=ag&&P.distanceTo(GT[ag].c)<45){d3GlStart(o);}}else d3GlPanel(o);}
   else{o.air3+=dt;
+    if(o.cannon){d3CannonStep(o,dt);}else{
     if(o.glide){const gs=o.gs,KK=(phase==='race')?GK:ZK;let pitch=0;
       if(o===st){const sIn=st.steer||0;rotAbout(F,U,-sIn*gs.move*GLYAW*dt);o.roll+=((sIn*gs.roll*2.4)-o.roll)*Math.min(1,dt*6);
         pitch=clamp((KK.up?1:0)-(KK.down?1:0)+((phase==='race')?-padAy:0),-1,1);if(GLX.force!=null)pitch=GLX.force;   // 上下は逆：↑＝機首下げ（早く降りる）／↓＝機首上げ（遠くへ・減速）
@@ -4176,7 +4192,7 @@ function d3Move(o,dt,slip){d3Init(o);const P=o.P3,U=o.U3,F=o.F3;
     else o._jg2=0;
     P.addScaledVector(o.V3,dt);if(o.glide&&o===st)glLog(o,dt);
     if(((o._gForce>0&&(o._gForce-=dt)>0)?false:sense(o,dt))){o.fly=false;_t1.copy(o.V3).addScaledVector(U,-o.V3.dot(U));const sp=_t1.length();if(sp>1){F.copy(_t1).multiplyScalar(1/sp);}o.v=Math.max(sp,0);o.V3.set(0,0,0);if(o.ma!==undefined)o.ma=o.h;if(o.glide)o._rs=300;o.landed=true;o.glide=false;o.roll=0;d3Ev(o,'land');}
-    else if(o.air3>(o.glide?GLFALL:GFALL)||P.y<-120){o.fell=true;o.glide=false;o.roll=0;d3Ev(o,'fell');}}
+    else if(o.air3>(o.glide?GLFALL:GFALL)||P.y<-120){o.fell=true;o.glide=false;o.roll=0;d3Ev(o,'fell');}}}
   if(!o.fly&&!o.fell){d3Wall(o,dt);d3Edge(o,dt);}   // 壁との当たり判定（接地中のみ）＋路面の端の物理壁
   if(o.wing)o.wing.visible=!!o.glide;
   d3SyncH(o);}
@@ -4693,7 +4709,7 @@ function spawnProj(type,o,back,extra){
   let tgt=null;
   if(type==='red'&&!back){let bd=1e9;for(const a of actors()){if(a===o)continue;const d=a.prog-o.prog;if(d>0&&d<bd){bd=d;tgt=a;}}}
   if(type==='blue'){let bp=-1;for(const a of actors()){if(a===o)continue;if(a.prog>bp){bp=a.prog;tgt=a;}}if(tgt&&tgt.prog<o.prog)tgt=null;}
-  scene.add(m);projs.push(Object.assign({type,o,h,x:o.x+Math.sin(h)*3.2,z:o.z+Math.cos(h)*3.2,v:type==='bomb'?(back?0:30):(SP[type]||0),age:0,life:type==='bomb'?3:type==='fire'?1.8:type==='blue'?12:type==='boom'?3:8,bounce:0,m,bi:o.bi||0,tgt,hit:new Set()},extra));}
+  scene.add(m);projs.push(Object.assign({type,o,h,x:o.x+Math.sin(h)*3.2,z:o.z+Math.cos(h)*3.2,v:(type==='bomb'?(back?0:30):(SP[type]||0))*((o.cn&&o.fly&&!back&&type!=='bomb')?D3_CANNON.item:1),cn:!!(o.cn&&o.fly&&!back),age:0,life:type==='bomb'?3:type==='fire'?1.8:type==='blue'?12:type==='boom'?3:8,bounce:0,m,bi:o.bi||0,tgt,hit:new Set()},extra));}
 function projStep(dt){
   for(let i=projs.length-1;i>=0;i--){const p=projs[i];p.age+=dt;
     if((p.life-=dt)<=0){if(p.type==='bomb')explode(p.x,p.z,6,'bomb');killProj(p,i);continue;}
@@ -4708,7 +4724,7 @@ function projStep(dt){
     p.x+=Math.sin(p.h)*p.v*dt;p.z+=Math.cos(p.h)*p.v*dt;
     const lt=(p.x-S[bi].x)*R[bi].x+(p.z-S[bi].z)*R[bi].z;
     if(Math.abs(lt)>LIM-1){const ex=lt-Math.sign(lt)*(LIM-1);p.x-=R[bi].x*ex;p.z-=R[bi].z*ex;
-      if(!homing&&p.type!=='bomb'){p.h=2*HD[bi]-p.h;p.bounce++;if(p.bounce>(p.type==='fire'?1:4)&&p.type!=='boom'){killProj(p,i);continue;}}}
+      if(!homing&&p.type!=='bomb'){if(p.cn&&p.type==='green'){killProj(p,i);continue;}p.h=2*HD[bi]-p.h;p.bounce++;if(p.bounce>(p.type==='fire'?1:4)&&p.type!=='boom'){killProj(p,i);continue;}}}
     p.gy=gY(p.x,p.z,bi);p.m.position.set(p.x,p.gy+(p.type==='bomb'?.7+Math.abs(Math.sin(p.age*6))*.2:.7),p.z);
     for(const a of actors()){if(a.ghost>0||p.hit.has(a)||(a===p.o&&(p.age<.5||p.type==='boom')))continue;
       if((a.x-p.x)**2+(a.z-p.z)**2<2.9*KART_HIT*KART_HIT&&Math.abs((p.gy||0)-(a.gy||0))<6){
