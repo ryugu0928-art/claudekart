@@ -4122,11 +4122,17 @@ const D3_GLPANEL={on:true,upR:.3,t:1,minV:3};   // upR:展開時の上向き初�
 function d3GlStart(o){o.glide=true;o.gs=glFrom(o);o.gv=o.v;o._dp=(o===st)&&!!((phase==='race'?GK:ZK).drift);o.lowT=0;o.lowDone=false;o.roll=0;o.gu=0;o.gth=0;o.gvs=0;o._gdy=null;if(o===st)GLLOG.length=0;d3Ev(o,'glide');if(o===st)$t('グライダー展開！ '+o.gs.name+'（'+o.gs.grp+'系・空中速度Lv'+o.gs.sl+'／操作Lv'+o.gs.hl+'）');o._glp=true;if(D3_GLPANEL.on){o._gForce=D3_GLPANEL.t;o.V3.addScaledVector(o.U3,D3_GLPANEL.upR*o.gv);}if(WORLD&&WORLD.id==='sweet'&&D3_CANNON.on)d3CannonStart(o);}   // 展開(通常の接地切れ/パネル通過とも)直後に打ち上げ：低い段差でも即着地しない／スイーツのグライダー板では大砲グライダー
 function d3GlPanel(o){if(!D3_GLPANEL.on||o.glide||o.fell)return;const ag=GT.findIndex(g=>g.air);if(ag<0)return;if(o.gi<ag-2)o._glp=false;
   if(o._glp||o.gi!==ag||o.v<D3_GLPANEL.minV)return;const g=GT[ag],P=o.P3;_t2.subVectors(P,g.c);if(_t2.length()>45||Math.abs(_t2.dot(g.x))>g.hw)return;
-  o.fly=true;o.air3=0;o.V3.copy(o.F3).multiplyScalar(o.v);d3GlStart(o);}
+  o.fly=true;o.air3=0;o.V3.copy(o.F3).multiplyScalar(o.v);d3GlStart(o);if(o===st)st.rampT=0;}   // 滑空開始から0.35秒はJA受付(rampT起点)
 /* 【追加】大砲グライダー（スイーツキャニオン：トンネル出口のグライダー板 → 円環の入口）。
    参照した資料（Super Mario Wiki: Cannon）の確認済みの挙動だけを再現する：①高速で次のコース区間へ移動 ②空中操作は大きく制限（コース側が軌道を誘導）
    ③飛行中に前方へ投げたアイテムは通常より速く遠くへ進む ④ミドリこうらは最初に壁へ当たると反射せず壊れる ⑤終端で速度が落ち、通常のグライダーに戻って着地。
    ※内部の速度・高度の数値は資料では未確定のため、下の D3_CANNON は仮の値（調整用）。パーツの性能差は反映していない。 */
+/* 【追加】グライダーパネルでのジャンプアクション(JA)。
+   パネルの手前22以内(幅の中・滑空開始と同じ速度条件)〜滑空開始から0.35秒の間にジャンプボタン(ドリフトキー)を押すとJA成立。
+   滑空から着地したときにミニターボが入る(通常のJAと同じ効果)。滑空中はrampT>=0にしてJA状態を保持する。 */
+function d3GlPanelAhead(o,R){if(!D3_GLPANEL.on||o.glide||o.fell||o.fly||o.v<D3_GLPANEL.minV)return false;const ag=GT.findIndex(g=>g.air);if(ag<0||o.gi!==ag-1)return false;
+  const g=GT[ag];_t2.subVectors(o.P3,g.c);return _t2.length()<=R&&Math.abs(_t2.dot(g.x))<=g.hw;}
+function d3JaLand(){const J=mtTable(st.P.mt);if(J.jumpSpeed>=(st.mtm||0))st.mta=J.jumpAcc/J.mtAcc;st.mt=Math.max(st.mt||0,J.jumpLen/60);st.mtm=Math.max(st.mtm||0,J.jumpSpeed);st.shake=.45;blip(260,.25);$t('ジャンプアクション！ '+J.jumpLen+'F ×'+J.jumpSpeed.toFixed(3));st.ja=false;st.rampT=-1;}
 const D3_CANNON={on:true,v:95,rise:45,end:7,lat:7,latRate:14,item:1.6};   // v:飛行速度 rise:弦から頂点までの高さ end:到着点の路面からの高さ lat:横にずらせる最大量 latRate:横移動の速さ item:投げたアイテムの速度倍率
 function d3CannonStart(o){const a=GT[SWEET_AIR],b=GT[SWEET_GAP[1]+1],C=o.cannon={t:0,lat:0,p0:a.c.clone(),p1:b.c.clone()};
   C.p1.y+=D3_CANNON.end;const dx=C.p1.x-C.p0.x,dz=C.p1.z-C.p0.z;C.L=Math.hypot(dx,dz);C.dx=dx/C.L;C.dz=dz/C.L;C.T=C.L/D3_CANNON.v;
@@ -4191,7 +4197,7 @@ function d3Move(o,dt,slip){d3Init(o);const P=o.P3,U=o.U3,F=o.F3;if(!o.fly)o.cann
       if(o._jg2>.2){o._jg2=0;o.fell=true;o.glide=false;o.roll=0;d3Ev(o,'fell');}}
     else o._jg2=0;
     P.addScaledVector(o.V3,dt);if(o.glide&&o===st)glLog(o,dt);
-    if(((o._gForce>0&&(o._gForce-=dt)>0)?false:sense(o,dt))){o.fly=false;_t1.copy(o.V3).addScaledVector(U,-o.V3.dot(U));const sp=_t1.length();if(sp>1){F.copy(_t1).multiplyScalar(1/sp);}o.v=Math.max(sp,0);o.V3.set(0,0,0);if(o.ma!==undefined)o.ma=o.h;if(o.glide)o._rs=300;o.landed=true;o.glide=false;o.roll=0;d3Ev(o,'land');}
+    if(((o._gForce>0&&(o._gForce-=dt)>0)?false:sense(o,dt))){o.fly=false;_t1.copy(o.V3).addScaledVector(U,-o.V3.dot(U));const sp=_t1.length();if(sp>1){F.copy(_t1).multiplyScalar(1/sp);}o.v=Math.max(sp,0);o.V3.set(0,0,0);if(o.ma!==undefined)o.ma=o.h;if(o.glide)o._rs=300;if(o===st&&o.glide&&st.ja)d3JaLand();o.landed=true;o.glide=false;o.roll=0;d3Ev(o,'land');}
     else if(o.air3>(o.glide?GLFALL:GFALL)||P.y<-120){o.fell=true;o.glide=false;o.roll=0;d3Ev(o,'fell');}}}
   if(!o.fly&&!o.fell){d3Wall(o,dt);d3Edge(o,dt);}   // 壁との当たり判定（接地中のみ）＋路面の端の物理壁
   if(o.wing)o.wing.visible=!!o.glide;
@@ -5371,7 +5377,7 @@ function step(dt){
   const air=st.y>0||st.vy>0;
   if(st.rampT>=0)st.rampT+=dt;
   if(pressed){pressed=false;
-    if(!st.ja&&K.drift&&((D3&&WORLD&&WORLD.id==='wp'?jpOn(st.P3,22):rampAhead(bi)<5)||(st.rampT>=0&&st.rampT<.35))){st.ja=true;st.jaT=1;$t('ジャンプアクション！');blip(500,.1);
+    if(!st.ja&&K.drift&&((D3&&WORLD&&WORLD.id==='wp'?jpOn(st.P3,22):(D3&&WORLD&&WORLD.id==='sweet'&&d3GlPanelAhead(st,22))||rampAhead(bi)<5)||(st.rampT>=0&&st.rampT<.35))){st.ja=true;st.jaT=1;$t('ジャンプアクション！');blip(500,.1);
       if(D3&&WORLD&&WORLD.id==='wp'&&st.rampCool<=0&&!st.fly&&st.y<=.01&&st.vy<=0&&st.v>10&&jpOn(st.P3,0)){st.vy=4.5+st.v*.1;st.rampT=0;st.rampCool=1.5;st.hop=false;dr.pend=0;$t('低空ジャンプアクション！');}}   // 台の付け根で早めに飛ぶ＝低空JA   // JA：ジャンプ台の直前〜離陸直後に入力
     else if(K.drift&&!air&&!(D3&&st.fly)&&st.v>14&&!dr.active){st.vy=8;st.hop=true;dr.pend=Math.sign(sIn);dr.c=0;dr.dsc=0;}}               // ミニジャンプ（地上）：ブーストなし・チャージなし
   if(air&&!dr.active){
