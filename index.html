@@ -4236,7 +4236,7 @@ function d3EdgeAxis(o){   // 道路の横方向(ゲートから補間)をカー�
   _fw.crossVectors(U,_ex);return true;}   // _ex=道路の横, _fw=走行面内の前後（継ぎ目判定用）
 function d3Road(P,U,dx,dy,dz,d){   // 横方向dの位置に路面があるか：前後0.7ずらした3点のどれかに路面があればあり（継ぎ目・細い隙間は無視）
   for(const f of[0,.7,-.7])if(d3Road1(P.x+dx*d+_fw.x*f,P.y+dy*d+_fw.y*f,P.z+dz*d+_fw.z*f,U))return true;return false;}
-function d3Edge(o,dt){if(!D3_EDGE_ON||!RD||!WORLD||WORLD.id!=='wp')return;const gi=o.gi;if(!(gi>=D3_EDGE_G0&&gi<=D3_EDGE_G1))return;   // gi未設定(NaN)のカートは対象外
+function d3Edge(o,dt){if(!D3_EDGE_ON||!RD||!WORLD)return;if(WORLD.id==='sweet'){d3EdgeSweet(o,dt);return;}if(WORLD.id!=='wp')return;const gi=o.gi;if(!(gi>=D3_EDGE_G0&&gi<=D3_EDGE_G1))return;   // gi未設定(NaN)のカートは対象外
   const P=o.P3,U=o.U3,F=o.F3,sg=o.v<0?-1:1;
   for(let it=0;it<3;it++){let moved=false;if(!d3EdgeAxis(o))return;
     for(const sd of[1,-1]){const dx=_ex.x*sd,dy=_ex.y*sd,dz=_ex.z*sd;
@@ -4247,6 +4247,23 @@ function d3Edge(o,dt){if(!D3_EDGE_ON||!RD||!WORLD||WORLD.id!=='wp')return;const 
       const c=(F.x*dx+F.y*dy+F.z*dz)*sg;   // 端へ向かう成分
       if(c>.01){o.v*=1-Math.min(.6,c*c*8*dt+c*1.0*dt);F.x-=dx*c*sg;F.y-=dy*c*sg;F.z-=dz*c*sg;F.addScaledVector(U,-F.dot(U));if(F.lengthSq()>.05)F.normalize();}
       o.wallHit=Math.max(o.wallHit||0,c);}
+    if(!moved)break;}}
+/* 【追加】スイーツキャニオン 反重力ゾーン(ゲート76〜102：反重力板→ジグザグの二股→合流)の路面の端の物理壁。
+   この区間のガードレールのメッシュは、まばらな支柱と薄い梁だけで隙間が多く、外側のカーブにはほぼ無いため、メッシュ壁だけではすり抜ける。
+   ウォーターパークと同じ『路面があるか』の判定を、道の向きに依存しないよう周囲8方向で行い、路面の外へは出られないようにする(分岐道・合流部を含む)。?noedge で無効化 */
+const D3_EDGE_SW0=76,D3_EDGE_SW1=102;
+function d3EdgeSweet(o,dt){const gi=o.gi;if(!(gi>=D3_EDGE_SW0&&gi<=D3_EDGE_SW1)||o.glide||(o.air3||0)>.6)return;   // gi未設定(NaN)・滑空中・空中は対象外
+  const P=o.P3,U=o.U3,F=o.F3,sg=o.v<0?-1:1;
+  for(let it=0;it<3;it++){let moved=false;_eX.crossVectors(U,F);
+    for(let k=0;k<8;k++){const c=_wDirs[k][0],s=_wDirs[k][1],dx=F.x*c+_eX.x*s,dy=F.y*c+_eX.y*s,dz=F.z*c+_eX.z*s;
+      _fw.set(dx,dy,dz);_fw.crossVectors(U,_fw);   // 継ぎ目判定用の前後(進む方向に直交する向き)
+      if(d3Road(P,U,dx,dy,dz,D3_EDGE_RB)||d3Road(P,U,dx,dy,dz,D3_EDGE_RB+.4))continue;   // 路面あり→壁にしない
+      let e=D3_EDGE_RB;for(let d=.15;d<D3_EDGE_RB;d+=.15){if(!d3Road(P,U,dx,dy,dz,d)&&!d3Road(P,U,dx,dy,dz,d+.3)){e=d;break;}}
+      const pen=Math.min(D3_EDGE_RB-e,.6);if(pen<=.001)continue;
+      P.x-=dx*pen;P.y-=dy*pen;P.z-=dz*pen;moved=true;
+      const cc=(F.x*dx+F.y*dy+F.z*dz)*sg;   // 端へ向かう成分
+      if(cc>.01){o.v*=1-Math.min(.6,cc*cc*8*dt+cc*1.0*dt);F.x-=dx*cc*sg;F.y-=dy*cc*sg;F.z-=dz*cc*sg;F.addScaledVector(U,-F.dot(U));if(F.lengthSq()>.05)F.normalize();}
+      o.wallHit=Math.max(o.wallHit||0,cc);}
     if(!moved)break;}}
 const GATE_LOOK=12,GATE_LAT=30,GATE_VY_WP=34;
 /* 【修正】ウォーターパーク ゲート37〜80：路面の左側がバンクして上がり、左壁沿いの通過点はゲート中心より高さ+16〜28になる。縦の許容(hh+4=14)だとゲート44付近から取りこぼして周回判定が獲得できなかったため、この区間だけ縦の許容を拡大(他コース/他区間は従来どおり) */
