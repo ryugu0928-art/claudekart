@@ -4013,6 +4013,20 @@ function d3BuildWalls(g){const FSEEN=new Set(),C=WORLD.cfg,WIN=C.wallIn!=null?C.
 /* ---- 当たり判定の可視化（デバッグ）：F3 または「判定表示」ボタンで切替 ---- */
 (function(){let mode=0,cur=null,grp=null,hud=null,wireMode=false;
   const COL={0:[1,.2,.2],1:[1,0,1],2:[1,.9,0]};
+  /* 【追加】ジャンプ台・グライダーパネルの判定範囲(矩形)：[点(x,y,z)×4, 色]。水色=ジャンプ台、橙=先端(自動ジャンプ)、青=手前のJA受付、紫=グライダー滑空開始 */
+  const JPC={pad:[0,.9,1],lip:[1,.5,0],pre:[.4,.6,1],gl:[.8,.3,1]};
+  function jpDbgQuads(W){const Q=[];if(!W)return Q;
+    if(W.id==='sweet'){
+      if(typeof JP_SW!=='undefined')for(const q of JP_SW){const cx=q[0],cz=q[1],fx=q[2],fz=q[3],hl=q[4],hw=q[5],y=q[6]+.2,lx=-fz,lz=fx;
+        const rc=(u0,u1,dy)=>[[cx+fx*u0-lx*hw,y+dy,cz+fz*u0-lz*hw],[cx+fx*u1-lx*hw,y+dy,cz+fz*u1-lz*hw],[cx+fx*u1+lx*hw,y+dy,cz+fz*u1+lz*hw],[cx+fx*u0+lx*hw,y+dy,cz+fz*u0+lz*hw]];
+        Q.push({p:rc(-hl-8,-hl,0),c:JPC.pre},{p:rc(-hl,hl,0),c:JPC.pad},{p:rc(hl-2.5,hl+1,.05),c:JPC.lip});}
+      if(typeof D3_GLPANEL!=='undefined'&&W.gates){const ag=W.gates.findIndex(a=>a[11]);if(ag>=0){const a=W.gates[ag],c=[a[0],a[1],a[2]],n=[a[3],a[4],a[5]],u=[a[6],a[7],a[8]],
+          x=[u[1]*n[2]-u[2]*n[1],u[2]*n[0]-u[0]*n[2],u[0]*n[1]-u[1]*n[0]],xl=Math.hypot(x[0],x[1],x[2])||1,G=D3_GLPANEL;
+        const pt=(f,l)=>[c[0]+n[0]*f+x[0]/xl*l+u[0]*.25,c[1]+n[1]*f+x[1]/xl*l+u[1]*.25,c[2]+n[2]*f+x[2]/xl*l+u[2]*.25];
+        Q.push({p:[pt(-G.jaLead,-G.lat),pt(G.fw0,-G.lat),pt(G.fw0,G.lat),pt(-G.jaLead,G.lat)],c:JPC.pre},{p:[pt(G.fw0,-G.lat),pt(G.fw1,-G.lat),pt(G.fw1,G.lat),pt(G.fw0,G.lat)],c:JPC.gl});}}}
+    else if(W.id==='wp'&&typeof JP_WP!=='undefined'){for(const q of JP_WP){const y=q[4]+.2,rc=(z0,z1,dy)=>[[q[0],y+dy,z0],[q[1],y+dy,z0],[q[1],y+dy,z1],[q[0],y+dy,z1]];
+      Q.push({p:rc(q[2]-22,q[2],0),c:JPC.pre},{p:rc(q[2],q[3],0),c:JPC.pad},{p:rc(q[3]-2.5,q[3]+1,.05),c:JPC.lip});}}
+    return Q;}
   function build(W){const g=new THREE.Group();g.name='d3dbg';
     const mk=(P,I,colFn,opts)=>{const n=I.length,pos=new Float32Array(n*3),col=new Float32Array(n*3);
       for(let t=0;t<n/3;t++){const c=colFn(t);for(let k=0;k<3;k++){const i=I[t*3+k]*3,o=(t*3+k)*3;pos[o]=P[i];pos[o+1]=P[i+1];pos[o+2]=P[i+2];col[o]=c[0];col[o+1]=c[1];col[o+2]=c[2];}}
@@ -4023,6 +4037,10 @@ function d3BuildWalls(g){const FSEEN=new Set(),C=WORLD.cfg,WIN=C.wallIn!=null?C.
       const wg=new THREE.WireframeGeometry(fill.geometry);const wire=new THREE.LineSegments(wg,new THREE.LineBasicMaterial({color:0xff5050,transparent:true,opacity:.85,depthTest:false}));
       wire.name='wallWire';wire.frustumCulled=false;wire.renderOrder=1000;wire.raycast=()=>{};g.add(wire);}
     if(W.dbgR){const r=W.dbgR;const road=mk(r.P,r.I,()=>[.2,1,.3],{opacity:.28});road.name='road';g.add(road);}
+    {const jq=jpDbgQuads(W);if(jq.length){const P=[],I=[],LP=[];jq.forEach((q,k)=>{q.p.forEach(v=>P.push(v[0],v[1],v[2]));const b=k*4;I.push(b,b+1,b+2,b,b+2,b+3);for(let e=0;e<4;e++){const a=q.p[e],c=q.p[(e+1)%4];LP.push(a[0],a[1]+.05,a[2],c[0],c[1]+.05,c[2]);}});
+      const jm=mk(new Float32Array(P),new Uint32Array(I),t=>jq[t>>1].c,{opacity:.5});jm.name='jumpPads';g.add(jm);
+      const lg2=new THREE.BufferGeometry();lg2.setAttribute('position',new THREE.BufferAttribute(new Float32Array(LP),3));
+      const jl=new THREE.LineSegments(lg2,new THREE.LineBasicMaterial({color:0x00e5ff,transparent:true,opacity:.9,depthTest:false}));jl.name='jumpPadsLine';jl.frustumCulled=false;jl.renderOrder=1001;jl.raycast=()=>{};g.add(jl);}}
     return g;}
   function apply(){if(!cur||cur.world!==WORLD){if(grp&&grp.parent)grp.parent.remove(grp);grp=null;if(mode===0){cur=null;return;}
       if(!WORLD||(!WORLD.dbgW&&!WORLD.dbgR)){hudSet('判定データ未読込');return;}
@@ -4030,13 +4048,13 @@ function d3BuildWalls(g){const FSEEN=new Set(),C=WORLD.cfg,WIN=C.wallIn!=null?C.
     if(!grp)return;grp.visible=mode>0;
     const f=grp.getObjectByName('wallFill'),w=grp.getObjectByName('wallWire'),r=grp.getObjectByName('road');
     if(f){f.visible=mode===1||mode===2;f.material.depthTest=true;}
-    if(w)w.visible=mode===3;if(r)r.visible=mode===2;}
+    if(w)w.visible=mode===3;if(r)r.visible=mode===2;for(const nm of['jumpPads','jumpPadsLine']){const o=grp.getObjectByName(nm);if(o)o.visible=mode>0;}}
   const NAMES=['判定表示 OFF','①壁（塗り）','②壁＋路面（塗り）','③壁（ワイヤー・透視）'];
   function hudSet(t){if(hud)hud.firstChild.textContent=t;}
   function setMode(m){mode=m%4;if(mode===0&&grp)grp.visible=false;else apply();hudSet(NAMES[mode]);hud.lastChild.style.display=mode?'block':'none';}
   window.d3DbgSet=setMode;window.d3DbgInfo=()=>({mode,grp:!!grp,children:grp?grp.children.map(c=>c.name+':'+c.geometry.attributes.position.count):[]});
   function init(){hud=document.createElement('div');hud.style.cssText='position:fixed;left:8px;bottom:8px;z-index:99999;font:12px/1.4 sans-serif;color:#fff;background:rgba(0,0,0,.6);padding:5px 8px;border-radius:6px;cursor:pointer;user-select:none;pointer-events:auto';
-    hud.appendChild(document.createTextNode(NAMES[0]));const lg=document.createElement('div');lg.style.display='none';lg.innerHTML='<span style="color:#f55">■</span>壁 <span style="color:#f0f">■</span>追加壁 <span style="color:#fe0">■</span>柵の垂れ幕 <span style="color:#3f4">■</span>路面';hud.appendChild(lg);
+    hud.appendChild(document.createTextNode(NAMES[0]));const lg=document.createElement('div');lg.style.display='none';lg.innerHTML='<span style="color:#f55">■</span>壁 <span style="color:#f0f">■</span>追加壁 <span style="color:#fe0">■</span>柵の垂れ幕 <span style="color:#3f4">■</span>路面 <span style="color:#0ef">■</span>ジャンプ台 <span style="color:#f80">■</span>先端(自動ジャンプ) <span style="color:#69f">■</span>JA受付 <span style="color:#c4f">■</span>滑空開始';hud.appendChild(lg);
     hud.title='クリック or F3 で判定表示を切替';hud.onclick=()=>setMode(mode+1);document.body.appendChild(hud);
     addEventListener('keydown',e=>{if(e.code==='F3'){e.preventDefault();setMode(mode+1);}});
     setInterval(()=>{if(mode>0&&(!cur||cur.world!==WORLD))apply();},700);}
@@ -4438,6 +4456,15 @@ const WP_XWALL=new Float32Array([-133.094,-0.457,-204.82,-133.094,-0.457,-203.82
 const JP_WP=[[75.2,87.6,-220.3,-212.7,16.1],[63.4,76.1,-218.7,-211.3,9.8]];
 function jpLip(P){for(const q of JP_WP){if(P.x>=q[0]&&P.x<=q[1]&&P.z>=q[3]-2.5&&P.z<=q[3]+1&&Math.abs(P.y-q[4])<7)return true;}return false;}   // 台の先端(離陸位置)
 function jpOn(P,pre){for(const q of JP_WP){if(P.x>=q[0]&&P.x<=q[1]&&P.z>=q[2]-(pre||0)&&P.z<=q[3]&&Math.abs(P.y-q[4])<7)return true;}return false;}
+/* 【追加】スイーツキャニオンのジャンプ台(メッシュ名 jumpdai_01 / cracker01)：ゲート15=グライダー台の手前、73=反重力板の手前、132=最後の下り坂の手前。
+   向き付きの長方形 [中心x,中心z,進行方向x,進行方向z,前後の半長,左右の半幅,高さ]。ウォーターパークのJP_WPと同じ扱いで、
+   台の先端付近を通ると自動でジャンプし、台の手前〜上でジャンプボタン(ドリフトキー)を押すとジャンプアクションになる。 */
+const JP_SW=[[219.1,-38.8,0.956,-0.293,1.8,13.8,18.1],[-212.6,-252.4,0.384,0.923,1.7,13.8,-12.0],[188.7,239.5,-0.137,-0.991,3.6,15.6,10.3]];
+function swPad(P,fn){for(const q of JP_SW){const dx=P.x-q[0],dz=P.z-q[1],u=dx*q[2]+dz*q[3],v=-dx*q[3]+dz*q[2];if(Math.abs(v)<=q[5]&&Math.abs(P.y-q[6])<6&&fn(u,q[4]))return true;}return false;}
+function swPadOn(P,pre){return swPad(P,(u,hl)=>u>=-hl-(pre||0)&&u<=hl);}
+function swPadLip(P){return swPad(P,(u,hl)=>u>=hl-2.5&&u<=hl+1);}
+function jpOnAny(P,pre){return WORLD&&WORLD.id==='sweet'?swPadOn(P,pre):jpOn(P,pre);}
+function jpLipAny(P){return WORLD&&WORLD.id==='sweet'?swPadLip(P):jpLip(P);}
 /* 【追加】ゲート108〜109：ウォーリオホイール土台(CompB_Out_122/KanranPool系)の当たり判定。土台は円形(中心 x-109.35,z41.15 / 見た目の縁の半径≈6.7)で壁判定が無く通り抜けられた。
    縁の少し内側(半径5.5：カート半径ぶん外で止まる)に16角形の縦壁を立てる。高さは y-0.5〜4。調整は WP_WHEEL の中心・半径・高さ。 */
 const WP_WHEEL={x:-109.35,z:41.15,r:5.5,n:16,y0:-.5,y1:4};
@@ -4467,7 +4494,7 @@ function sweetAltKeep(n,x,y,z){const A=SWEET_ALT;
     if(!best||sc<best.sc)best={sc,lat,hgt,hw:a.hw+(b.hw-a.hw)*t};}
   if(!best)return false;const al=Math.abs(best.lat);
   return al>=best.hw-4&&al<=best.hw+8&&best.hgt>-1.5&&best.hgt<6;}
-const SWEET_ROAD=/__ck_(?:sponge01a_(?:\d+|BakeBlight_\d+|tunnel_\d+|water_\d+)|spongeMulti01_(?:\d+|Blight_\d+|Water_\d+)|candy0[12]_(?:\d+|water_\d+)|icingroad02w_(?:Multi|MultiWater)_\d+|icingroad01w_(?:MultiHasi|MultiHasiWater)_\d+)$/;
+const SWEET_ROAD=/__ck_(?:sponge01a_(?:\d+|BakeBlight_\d+|tunnel_\d+|water_\d+)|spongeMulti01_(?:\d+|Blight_\d+|Water_\d+)|candy0[12]_(?:\d+|water_\d+)|icingroad02w_(?:Multi|MultiWater)_\d+|icingroad01w_(?:MultiHasi|MultiHasiWater)_\d+|cracker01_\d+)$/;
 const SWEET_WALL=/__ck_(?:tunnelwall01_out|tunnelwall01|TunnelSaku001|candywall01a|candywall01b|candywall02b|cookiewall01|creamwall01|creamwall01_water|creamwall01_color|WallCorner001|chocoroad01a_kabe)_\d+$/;
 const SWEET_DIRT=/__ck_(?:candydirt01_div(?:Multi)?|icingroad02dot|icingroad02|icingroad01|chocosuger03(?:_div)?|chocoroad02)_\d+$/;   // 路面ではない走行可能な地面（床）＋ダート扱い：路肩のアイシング(icingroad02dot)・外周の地面(icingroad02/01・chocoroad02)・砂糖の地面(chocosuger03)・ダート(candydirt)
 const D3WORLDS={
@@ -5373,12 +5400,12 @@ function step(dt){
   st.rampCool=(st.rampCool||0)-dt;if(st.ja&&st.rampT<0){st.jaT=(st.jaT||0)-dt;if(st.jaT<=0)st.ja=false;}   // JA予約の失効
   if(st.rampCool<=0&&st.y<=.01&&st.vy<=0&&st.v>10&&Math.abs(lat)<W/2)for(const k of RAMPS){let d=bi-k;if(d>N/2)d-=N;if(d<-N/2)d+=N;
     if(Math.abs(d)<=1){st.vy=4.5+st.v*.1;st.rampT=0;st.rampCool=1.5;st.hop=false;dr.pend=0;st.shake=Math.max(st.shake,.25);blip(420,.12);break;}}
-  if(D3&&WORLD&&WORLD.id==='wp'&&st.rampCool<=0&&!st.fly&&st.y<=.01&&st.vy<=0&&st.v>10&&jpLip(st.P3)){st.vy=6.5+st.v*.1;st.rampT=0;st.rampCool=1.5;st.hop=false;dr.pend=0;st.shake=Math.max(st.shake,.25);blip(420,.12);}   // ウォーターパークのジャンプ台
+  if(D3&&WORLD&&(WORLD.id==='wp'||WORLD.id==='sweet')&&st.rampCool<=0&&!st.fly&&st.y<=.01&&st.vy<=0&&st.v>10&&jpLipAny(st.P3)){st.vy=6.5+st.v*.1;st.rampT=0;st.rampCool=1.5;st.hop=false;dr.pend=0;st.shake=Math.max(st.shake,.25);blip(420,.12);}   // ウォーターパークのジャンプ台
   const air=st.y>0||st.vy>0;
   if(st.rampT>=0)st.rampT+=dt;
   if(pressed){pressed=false;
-    if(!st.ja&&K.drift&&((D3&&WORLD&&WORLD.id==='wp'?jpOn(st.P3,22):(D3&&WORLD&&WORLD.id==='sweet'&&d3GlPanelAhead(st))||rampAhead(bi)<5)||(st.rampT>=0&&st.rampT<.35))){st.ja=true;st.jaT=1;$t('ジャンプアクション！');blip(500,.1);
-      if(D3&&WORLD&&WORLD.id==='wp'&&st.rampCool<=0&&!st.fly&&st.y<=.01&&st.vy<=0&&st.v>10&&jpOn(st.P3,0)){st.vy=4.5+st.v*.1;st.rampT=0;st.rampCool=1.5;st.hop=false;dr.pend=0;$t('低空ジャンプアクション！');}}   // 台の付け根で早めに飛ぶ＝低空JA   // JA：ジャンプ台の直前〜離陸直後に入力
+    if(!st.ja&&K.drift&&((D3&&WORLD&&WORLD.id==='wp'?jpOn(st.P3,22):(D3&&WORLD&&WORLD.id==='sweet'&&(d3GlPanelAhead(st)||jpOnAny(st.P3,8)))||rampAhead(bi)<5)||(st.rampT>=0&&st.rampT<.35))){st.ja=true;st.jaT=1;$t('ジャンプアクション！');blip(500,.1);
+      if(D3&&WORLD&&(WORLD.id==='wp'||WORLD.id==='sweet')&&st.rampCool<=0&&!st.fly&&st.y<=.01&&st.vy<=0&&st.v>10&&jpOnAny(st.P3,0)){st.vy=4.5+st.v*.1;st.rampT=0;st.rampCool=1.5;st.hop=false;dr.pend=0;$t('低空ジャンプアクション！');}}   // 台の付け根で早めに飛ぶ＝低空JA   // JA：ジャンプ台の直前〜離陸直後に入力
     else if(K.drift&&!air&&!(D3&&st.fly)&&st.v>14&&!dr.active){st.vy=8;st.hop=true;dr.pend=Math.sign(sIn);dr.c=0;dr.dsc=0;}}               // ミニジャンプ（地上）：ブーストなし・チャージなし
   if(air&&!dr.active){
     if(!K.drift){dr.pend=0;dr.dsc=0;}
