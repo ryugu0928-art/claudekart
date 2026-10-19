@@ -4883,6 +4883,10 @@ function redStep(p){
   for(const q of projs){if(q===p||(q.type!=='green'&&q.type!=='red')||q.life<=0)continue;if(q.o===p.o&&(q.age<.6||p.age<.6))continue;
     if((q.x-p.x)**2+(q.z-p.z)**2<2.9&&Math.abs((q.gy||0)-(p.gy||0))<6){q.life=0;return true;}}
   return false;}
+// ミドリこうら：当たり判定は甲羅本体より後ろにも伸びる（資料に寸法なし。後方へ伸ばす長さは暫定値）
+const GREEN_TAIL=1.6;
+function projDist2(p,a){const rx=a.x-p.x,rz=a.z-p.z;if(p.type!=='green')return rx*rx+rz*rz;
+  const dx=Math.sin(p.h),dz=Math.cos(p.h),t=Math.max(0,Math.min(GREEN_TAIL,-(rx*dx+rz*dz))),cx=rx+dx*t,cz=rz+dz*t;return cx*cx+cz*cz;}
 function projStep(dt){
   for(let i=projs.length-1;i>=0;i--){const p=projs[i];p.age+=dt;
     if((p.life-=dt)<=0){if(p.type==='bomb')explode(p.x,p.z,6,'bomb');killProj(p,i);continue;}
@@ -4904,7 +4908,7 @@ function projStep(dt){
       if(!homing&&p.type!=='bomb'){if(p.cn&&p.type==='green'){killProj(p,i);continue;}p.h=2*HD[bi]-p.h;p.bounce++;if(p.bounce>(p.type==='fire'?1:4)&&p.type!=='boom'){killProj(p,i);continue;}}}
     p.gy=gY(p.x,p.z,bi);p.m.position.set(p.x,p.gy+(p.type==='bomb'?.7+Math.abs(Math.sin(p.age*6))*.2:p.type==='fire'?.4+Math.abs(Math.sin(p.age*9))*.7:.7),p.z);if(shellModel(p.type))p.m.rotation.y=p.age*9;
     for(const a of actors()){if(a.ghost>0||p.hit.has(a)||(a===p.o&&(p.age<.5||p.type==='boom')))continue;
-      if((a.x-p.x)**2+(a.z-p.z)**2<2.9*KART_HIT*KART_HIT&&Math.abs((p.gy||0)-(a.gy||0))<6){
+      if(projDist2(p,a)<2.9*KART_HIT*KART_HIT&&Math.abs((p.gy||0)-(a.gy||0))<6){
         if(p.type==='bomb'){explode(p.x,p.z,6,'bomb');killProj(p,i);break;}
         if(p.type==='blue'){if(a!==p.tgt)continue;explode(p.x,p.z,8,'blue');killProj(p,i);break;}
         if(p.type==='boom'){hitActor(a,'boom');p.hit.add(a);continue;}
