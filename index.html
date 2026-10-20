@@ -4060,13 +4060,13 @@ function d3BuildWalls(g){const FSEEN=new Set(),C=WORLD.cfg,WIN=C.wallIn!=null?C.
     addEventListener('keydown',e=>{if(e.code==='F3'){e.preventDefault();setMode(mode+1);}});
     setInterval(()=>{if(mode>0&&(!cur||cur.world!==WORLD))apply();},700);}
   if(document.body)init();else addEventListener('DOMContentLoaded',init);})();
-function buildRoadBVH(g){g.updateMatrixWorld(true);const C=WORLD.cfg;const SF=[],RF=[],P=[],I=[],nm={};let off=0;const v=new THREE.Vector3(),FT=[];
+function buildRoadBVH(g){g.updateMatrixWorld(true);const C=WORLD.cfg;const SF=[],WF=[],RF=[],P=[],I=[],nm={};let off=0;const v=new THREE.Vector3(),FT=[];
   g.traverse(o=>{if(!o.isMesh||!o.material)return;const mn=C.name(o);
     const road=C.road(mn)||(D3_EXTRA&&C.patch(mn)),floor=D3_EXTRA&&C.floor(mn),jpm=!!(C.jpName&&C.jpName.test(mn));if(!road&&!floor&&!jpm)return;
     const pa=o.geometry.attributes.position,ix=o.geometry.index,W=new Float32Array(pa.count*3);
     for(let i=0;i<pa.count;i++){v.fromBufferAttribute(pa,i).applyMatrix4(o.matrixWorld);W[i*3]=v.x;W[i*3+1]=v.y;W[i*3+2]=v.z;}
     const n=ix?ix.count:pa.count;
-    if(road||jpm){for(let i=0;i<W.length;i++)P.push(W[i]);let kept=0;for(let t=0;t<n;t+=3){const i0=(ix?ix.getX(t):t),i1=(ix?ix.getX(t+1):t+1),i2=(ix?ix.getX(t+2):t+2);if(jpm&&!C.jpPick(W,i0*3,i1*3,i2*3))continue;if(C.roadSkip&&C.roadSkip(W,i0*3,i1*3,i2*3))continue;I.push(i0+off,i1+off,i2+off);SF.push(0);RF.push(1);kept++;}off+=pa.count;nm[mn]=(nm[mn]||0)+kept;}   // roadSkip：ガードレール足元の段差(高さ.23の細い帯)は地面にしない＝接触時に乗り上げるのを防ぐ
+    if(road||jpm){for(let i=0;i<W.length;i++)P.push(W[i]);let kept=0;for(let t=0;t<n;t+=3){const i0=(ix?ix.getX(t):t),i1=(ix?ix.getX(t+1):t+1),i2=(ix?ix.getX(t+2):t+2);if(jpm&&!C.jpPick(W,i0*3,i1*3,i2*3))continue;if(C.roadSkip&&C.roadSkip(W,i0*3,i1*3,i2*3))continue;I.push(i0+off,i1+off,i2+off);SF.push(0);WF.push(/water/i.test(mn)&&!/RoadMetal/i.test(mn)?1:0);RF.push(1);kept++;}off+=pa.count;nm[mn]=(nm[mn]||0)+kept;}   // roadSkip：ガードレール足元の段差(高さ.23の細い帯)は地面にしない＝接触時に乗り上げるのを防ぐ
     else for(let t=0;t<n;t+=3){const a=(ix?ix.getX(t):t)*3,b=(ix?ix.getX(t+1):t+1)*3,c=(ix?ix.getX(t+2):t+2)*3,
         e1x=W[b]-W[a],e1y=W[b+1]-W[a+1],e1z=W[b+2]-W[a+2],e2x=W[c]-W[a],e2y=W[c+1]-W[a+1],e2z=W[c+2]-W[a+2],
         nx=e1y*e2z-e1z*e2y,ny=e1z*e2x-e1x*e2z,nz=e1x*e2y-e1y*e2x,l=Math.hypot(nx,ny,nz);
@@ -4080,14 +4080,14 @@ function buildRoadBVH(g){g.updateMatrixWorld(true);const C=WORLD.cfg;const SF=[]
     for(let i=0;i<3;i++){const a=1+i*3,b=1+((i+1)%3)*3,p=[],q=[];for(let k=0;k<3;k++){p.push(f[a+k]+(c[k]-f[a+k])*.1);q.push((f[a+k]+f[b+k])/2*.9+c[k]*.1);}pts.push(p,q);}   // 重心＋頂点/辺中点(内側寄り)の計7点
     let bad=false;for(const p of pts)if(rd0.raycast(p[0]+f[10]*.001,p[1]+f[11]*.001,p[2]+f[12]*.001,-f[10],-f[11],-f[12],D3_STACK,hh)&&hh.t>D3_STACK_EPS){bad=true;break;}   // 直下の路面より高い＝路面を横取りする面
     if(bad){drop++;continue;}
-    const base=P.length/3;for(let k=1;k<10;k++)P.push(f[k]);I.push(base,base+1,base+2);SF.push(C.dirt(f[0])?1:0);RF.push(0);ex[f[0]]=(ex[f[0]]||0)+1;}
-  RD=FT.length?new TriBVH(new Float32Array(P),new Uint32Array(I)):rd0;WORLD.dbgR={P:new Float32Array(P),I:new Uint32Array(I)};RD.mats=nm;RD.extra={floor:ex,dropped:drop};RD.surf=Uint8Array.from(SF);RD.jgRoad=Uint8Array.from(RF);   // 三角形ごとの地形：0=路面 1=ダート
+    const base=P.length/3;for(let k=1;k<10;k++)P.push(f[k]);I.push(base,base+1,base+2);SF.push(C.dirt(f[0])?1:0);WF.push(0);RF.push(0);ex[f[0]]=(ex[f[0]]||0)+1;}
+  RD=FT.length?new TriBVH(new Float32Array(P),new Uint32Array(I)):rd0;WORLD.dbgR={P:new Float32Array(P),I:new Uint32Array(I)};RD.mats=nm;RD.extra={floor:ex,dropped:drop};RD.surf=Uint8Array.from(SF);RD.wat=Uint8Array.from(WF);RD.jgRoad=Uint8Array.from(RF);   // 三角形ごとの地形：0=路面 1=ダート
   if(FT.length)console.info('[stadium] 路面BVH 追加床',ex,'重なり除外',drop);
   try{d3BuildWalls(g);}catch(e){WL=null;console.warn('wall bvh failed',e);}   // 壁（青い柵など）の判定を追加
   return RD;}
 function rayDn(px,py,pz,U,up,dn){const ox=px+U.x*up,oy=py+U.y*up,oz=pz+U.z*up;
   if(!RD.raycast(ox,oy,oz,-U.x,-U.y,-U.z,up+dn,_hit))return false;
-  RH.s=RD.surf?RD.surf[_hit.tri]:0;RH.x=ox-U.x*_hit.t;RH.y=oy-U.y*_hit.t;RH.z=oz-U.z*_hit.t;let nx=_hit.nx,ny=_hit.ny,nz=_hit.nz;
+  RH.s=RD.surf?RD.surf[_hit.tri]:0;RH.w=RD.wat?RD.wat[_hit.tri]:0;RH.x=ox-U.x*_hit.t;RH.y=oy-U.y*_hit.t;RH.z=oz-U.z*_hit.t;let nx=_hit.nx,ny=_hit.ny,nz=_hit.nz;
   if(nx*U.x+ny*U.y+nz*U.z<0){nx=-nx;ny=-ny;nz=-nz;}RH.nx=nx;RH.ny=ny;RH.nz=nz;return true;}
 function d3GY(x,z,hint){if(!RD)return hint||0;const U={x:0,y:1,z:0};return rayDn(x,(hint||0)+4,z,U,0,40)?RH.y:(hint||0);}
 /* ---- ゲート ---- */
@@ -4122,13 +4122,14 @@ function d3Place(o,x,z,h,hint){d3Init(o);const U=o.U3.set(0,1,0);
   o.F3.set(Math.sin(h),0,Math.cos(h));o.F3.addScaledVector(U,-o.F3.dot(U)).normalize();
   o.h=h;o.h3=h;o.pp3.copy(o.P3);o.fly=false;o.air3=0;o.fell=false;o.gi=GT.length-1;o.CU.copy(U);o.CF.copy(o.F3);o.V3.set(0,0,0);o.x=x;o.z=z;o.gy=o.P3.y;}
 function d3PlaceAll(){mkGates();for(const o of [st,...rivals])d3Place(o,o.x,o.z,o.h,0);}
-function sense(o,dt){const P=o.P3,U=o.U3,F=o.F3;_X.crossVectors(U,F);let n=0,dn=0;_a.set(0,0,0);
+function sense(o,dt){const P=o.P3,U=o.U3,F=o.F3;_X.crossVectors(U,F);let n=0,dn=0,wn=0;_a.set(0,0,0);
   const TL=WORLD.cfg&&WORLD.cfg.maxTilt,TA=sense._t||(sense._t=[0,0,0,0,0]),TS=sense._s||(sense._s=[0,0,0,0,0]),TN=sense._n||(sense._n=[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]);let good=0;
   for(let k=0;k<5;k++){const a=SOFF[k][0],b=SOFF[k][1];_ok[k]=rayDn(P.x+_X.x*a+F.x*b,P.y+_X.y*a+F.y*b,P.z+_X.z*a+F.z*b,U,WORLD.up||1.5,1.3)?1:0;
-    if(_ok[k]){_pts[k].set(RH.x,RH.y,RH.z);TN[k][0]=RH.nx;TN[k][1]=RH.ny;TN[k][2]=RH.nz;TS[k]=RH.s;
+    if(_ok[k]){_pts[k].set(RH.x,RH.y,RH.z);TN[k][0]=RH.nx;TN[k][1]=RH.ny;TN[k][2]=RH.nz;TS[k]=RH.s;(sense._w||(sense._w=[0,0,0,0,0]))[k]=RH.w;
       TA[k]=(!TL||((RH.nx*U.x+RH.ny*U.y+RH.nz*U.z>=TL)&&((RH.x-P.x)*U.x+(RH.y-P.y)*U.y+(RH.z-P.z)*U.z<=WORLD.cfg.maxStep)))?1:0;if(TA[k])good++;}}
   /* 急斜面・段差(ガードレール/手すり/梁の側面や上面)を地面として拾い、乗り上げるのを防ぐ：他に正常な接地点があれば、その点だけを使う */
-  for(let k=0;k<5;k++){if(_ok[k]&&(good===0||TA[k])){_a.x+=TN[k][0];_a.y+=TN[k][1];_a.z+=TN[k][2];n++;if(TS[k])dn++;}else _ok[k]=0;}
+  for(let k=0;k<5;k++){if(_ok[k]&&(good===0||TA[k])){_a.x+=TN[k][0];_a.y+=TN[k][1];_a.z+=TN[k][2];n++;if(TS[k])dn++;if(sense._w[k])wn++;}else _ok[k]=0;}
+  if(n>0)o.wet=(wn*2>n)?1:0;   // 接地5点の過半が水メッシュなら水中
   o.sf3=(dn*2>n)?1:0;   // 接地5点の過半が芝・砂ならダート
   if(!n)return false;
   if(_ok[1]&&_ok[2]&&_ok[3]&&_ok[4]){_t1.subVectors(_pts[3],_pts[4]);_t2.subVectors(_pts[1],_pts[2]);_n.crossVectors(_t1,_t2);if(_n.lengthSq()>1e-8)_n.normalize();else _n.copy(_a).normalize();}
@@ -5363,7 +5364,7 @@ function lvOf(b){const p=['driver','body','tire','glider'].map((k,i)=>partData(k
 function rawP(b){const c=lvOf(b),L=c.level;return{c,L,sp:speedTable(cl20(L[0])),ac:accTable(cl20(L[4])),h:handlingTable(cl20(L[6])),ah:handlingTable(cl20(L[8])).air,sa:speedTable(cl20(L[2])).air,   /* 空中操作=L[8]・空中速度=L[2]（従来は反重力のL[9]/L[3]を参照していた） */w:weightTable[cl20(L[5])],mt:Math.max(6,cl20(L[11])),iv:ivMul[cl20(c.ivLevel)],of:L[10]};}
 const DEFB=[names.drivers.findIndex(x=>x[0]==='Mario'),names.bodies.findIndex(x=>x[0]==='スタンダードカート'),names.tires.findIndex(x=>x[0]==='ノーマルタイヤ'),names.gliders.findIndex(x=>x[0]==='スーパーカイト')];
 const RAW0=rawP(DEFB); // 基準構成（Mario+スタンダード）＝従来のゲーム挙動と一致するよう正規化
-function derive(b){const r=rawP(b);return Object.assign(r,{maxV:r.sp.ground*KS,acc:clamp(r.ac.lim/RAW0.ac.lim,.5,1.7),turn:clamp(r.h.ground[0]/RAW0.h.ground[0],.6,1.6),air:clamp(r.ah[1]/RAW0.ah[1],.7,1.4),drift:clamp(r.h.ground[1]/RAW0.h.ground[1],.7,1.4),mass:r.w[1],off:clamp(.4+.025*r.of,.4,.9),ivT:1.76*r.iv,b});}
+function derive(b){const r=rawP(b);return Object.assign(r,{maxV:r.sp.ground*KS,acc:clamp(r.ac.lim/RAW0.ac.lim,.5,1.7),turn:clamp(r.h.ground[0]/RAW0.h.ground[0],.6,1.6),air:clamp(r.ah[1]/RAW0.ah[1],.7,1.4),drift:clamp(r.h.ground[1]/RAW0.h.ground[1],.7,1.4),wturn:clamp(r.h.water[0]/RAW0.h.ground[0],.6,1.7),wdrift:clamp(r.h.water[1]/RAW0.h.ground[1],.6,1.4),mass:r.w[1],off:clamp(.4+.025*r.of,.4,.9),ivT:1.76*r.iv,b});}
 const randBuild=()=>[names.drivers.length,names.bodies.length,names.tires.length,names.gliders.length].map(n=>Math.floor(Math.random()*n));
 function loadBuild(){try{const v=JSON.parse(localStorage.getItem('mk_build'));if(Array.isArray(v)&&v.length===4&&v[0]<names.drivers.length&&v[1]<names.bodies.length&&v[2]<names.tires.length&&v[3]<names.gliders.length)return v;}catch(e){}return DEFB.slice();}
 const DCOL=['#ff9ecb','#8fd3ff','#ff5a4d','#4aa3ff','#ffd23f','#40c463','#ff8a3d','#ff7ab6','#5ad1c9','#a880ff','#e23028','#c0c8d0','#a0d020','#8a5cff','#f0c020','#3fbf3f','#ffd21f','#2a7a2a'];
@@ -5597,8 +5598,10 @@ function step(dt){
   if(D3&&WORLD&&(WORLD.id==='wp'||WORLD.id==='sweet')&&st.rampCool<=0&&!st.fly&&st.y<=.01&&st.vy<=0&&st.v>10&&jpLipAny(st.P3)){st.vy=6.5+st.v*.1;st.rampT=0;st.rampCool=1.5;st.hop=false;dr.pend=0;st.shake=Math.max(st.shake,.25);blip(420,.12);}   // ウォーターパークのジャンプ台
   const air=st.y>0||st.vy>0;
   if(st.rampT>=0)st.rampT+=dt;
+  /* 水中JA：ニュートラル/左右は空中でブースト発動(着地ブーストより弱い)、上下入力はトリック終了(着地)まで遅延。発動時間0.35秒・弱さ0.6倍は暫定値 */
+  if(st.ja){st.jaE=(st.jaE||0)+dt;if(air&&st.jaWet&&!st.jaVert&&!st.jaWB&&st.jaE>=.35){st.jaWB=1;const J=mtTable(st.P.mt);st.mta=J.jumpAcc/J.mtAcc*.6;st.mt=Math.max(st.mt||0,J.jumpLen/60*.6);st.mtm=Math.max(st.mtm||0,1+(J.jumpSpeed-1)*.6);st.shake=.25;blip(260,.15);$t('水中JA：空中ブースト（弱）');}}
   if(pressed){pressed=false;
-    if(!st.ja&&K.drift&&((D3&&WORLD&&WORLD.id==='wp'?jpOn(st.P3,22):(D3&&WORLD&&WORLD.id==='sweet'&&(d3GlPanelAhead(st)||jpOnAny(st.P3,JA_PRE)))||rampAhead(bi)<5)||(st.rampT>=0&&st.rampT<.35))){st.ja=true;st.jaT=1;$t('ジャンプアクション！');blip(500,.1);
+    if(!st.ja&&K.drift&&((D3&&WORLD&&WORLD.id==='wp'?jpOn(st.P3,22):(D3&&WORLD&&WORLD.id==='sweet'&&(d3GlPanelAhead(st)||jpOnAny(st.P3,JA_PRE)))||rampAhead(bi)<5)||(st.rampT>=0&&st.rampT<.35))){st.ja=true;st.jaT=1;st.jaE=0;st.jaWB=0;st.jaWet=!!(D3&&st.wet);st.jaVert=!!(K.up||K.down);$t('ジャンプアクション！');blip(500,.1);
       if(D3&&WORLD&&(WORLD.id==='wp'||WORLD.id==='sweet')&&st.rampCool<=0&&!st.fly&&st.y<=.01&&st.vy<=0&&st.v>10&&jpOnAny(st.P3,0)){st.vy=4.5+st.v*.1;st.rampT=0;st.rampCool=1.5;st.hop=false;dr.pend=0;$t('低空ジャンプアクション！');}}   // 台の付け根で早めに飛ぶ＝低空JA   // JA：ジャンプ台の直前〜離陸直後に入力
     else if(K.drift&&!air&&!(D3&&st.fly)&&st.v>14&&!dr.active){st.vy=8;st.hop=true;dr.pend=Math.sign(sIn);dr.c=0;dr.dsc=0;}}               // ミニジャンプ（地上）：ブーストなし・チャージなし
   if(air&&!dr.active){
@@ -5610,9 +5613,9 @@ function step(dt){
   }
   if(wasAir&&!air){
     if((st.dAir||0)>.1){$t(off?'ダート上に着地：再接地（減速再開）':'ダートを飛び越えた！（上空'+st.dAir.toFixed(2)+'秒）');}st.dAir=0;
-    if(st.ja){const J=mtTable(st.P.mt);if(J.jumpSpeed>=(st.mtm||0))st.mta=J.jumpAcc/J.mtAcc;   /* 加速パラメータは通常MT比のモデル値（式そのものは非公開） */
+    if(st.ja&&!st.jaWB){const J=mtTable(st.P.mt);if(J.jumpSpeed>=(st.mtm||0))st.mta=J.jumpAcc/J.mtAcc;   /* 加速パラメータは通常MT比のモデル値（式そのものは非公開） */
       st.mt=Math.max(st.mt||0,J.jumpLen/60);st.mtm=Math.max(st.mtm||0,J.jumpSpeed);st.shake=.45;blip(260,.25);$t('ジャンプブースト！ '+J.jumpLen+'F ×'+J.jumpSpeed.toFixed(3));}
-    st.ja=false;st.rampT=-1;st.hop=false;
+    st.ja=false;st.jaWB=0;st.rampT=-1;st.hop=false;
     if(!dr.active){if(K.drift&&dr.pend&&st.v>=.55*st.P.maxV){dr.active=true;dr.dir=dr.pend;dr.lv=0;dr.pend=0;dr.age=0;dr.yaw=0;st.dc=null;dr.c=Math.min(40,dr.dsc*120);}   /* 着地前の内側入力による初期チャージ(最大40)は公開資料に記載がなく暫定 */
       else{if(K.drift&&dr.pend)$t('ドリフト開始には最高速の55%以上が必要');dr.c=0;dr.pend=0;}}
     dr.dsc=0;
@@ -5630,11 +5633,13 @@ function step(dt){
   const boosting=st.boost>0;if(boosting)st.boost-=dt;if(st.mt>0)st.mt-=dt;
   if(air&&off)st.dAir=(st.dAir||0)+dt;   // ダート上空にいた時間（接地していない間は路面補正を受けない）
   const cAdd=.26*coins,gnd=!air,maxV=maxVOf(st,boosting,(gnd&&sf.t==='dirt')?sf.br:0,1)*((gnd&&(sf.t==='sand'||sf.t==='ice'))?sf.br:1);if(st.kick>0){st.kick-=dt;st.v=Math.min(maxV,st.v+35*dt);}
-  if(boosting&&!K.down)st.v=appr(st.v,maxV,70*dt);
+  const wet=!!(D3&&st.wet),jaAir=air&&(st.ja||st.rampT>=0)&&!st.jaWB;   // ジャンプアクション中の空中は加速しない（着地してから加速）
+  if(jaAir){/* 空中：加速なし */}
+  else if(boosting&&!K.down)st.v=appr(st.v,maxV,70*dt);
   else if(K.up){if(st.v<maxV)st.v=Math.min(maxV,st.v+(st.v<MAXV*.55?24:15)*st.P.acc*dt);}
   else if(K.down){st.v-=(st.v>0?46:20)*dt;st.v=Math.max(st.v,-13);}
   else st.v=appr(st.v,0,9*dt);
-  if(st.mt>0&&K.up&&st.v<maxV)st.v=Math.min(maxV,st.v+45*(st.mta||1)*dt);
+  if(!jaAir&&st.mt>0&&K.up&&st.v<maxV)st.v=Math.min(maxV,st.v+45*(st.mta||1)*dt);
   if(dr.active&&K.up&&K.down)st.v=Math.max(0,st.v-34*dt);
   if(st.rampT>=0&&air)st.v*=1-.25*dt;else if(st.hop&&air)st.v*=1-(.3*Math.abs(st.steer)+.12)*dt;   // 空中は地上より遅い：R連打は不利   // ミニジャンプ中に大きく切ると減速（着地ドリフトの利点）
   if(st.v>maxV)st.v=appr(st.v,maxV,((off&&!air)?38:12)*dt);
@@ -5643,7 +5648,7 @@ function step(dt){
   const sp=Math.abs(st.v),dv=st.v>=0?1:-1;
   const grip=Math.min(1,sp/9)*(1-.3*Math.min(1,sp/MAXV))*(st.ink>0?.6:1);
   let dk=1;if(dr.active){const tg=driftCoef(dIn,sMag,sAng,dr.dir);if(st.dc==null)st.dc=tg;st.dc+=(tg-st.dc)*Math.min(1,dt*10);dr.age=(dr.age||0)+dt;dk=DRIFT_TRANS?(.8+.2*Math.min(1,dr.age/.25)):1;}   // 【未測定の暫定モデル】開始直後〜約0.25秒の旋回の立ち上がり（公開資料に測定値なし）
-  const rate=dr.active?dr.dir*Math.min(1,sp/14)*st.dc*dk*(K.down?1.3:1)*st.P.drift*DRIFT_S:(air?st.steer*(st.vy<0?1.3:.55)*st.P.air:st.steer*2.0*st.P.turn*grip*dv);
+  const rate=dr.active?dr.dir*Math.min(1,sp/14)*st.dc*dk*(K.down?1.3:1)*st.P.drift*(wet?st.P.wdrift/st.P.drift:1)*DRIFT_S:(air?st.steer*(st.vy<0?1.3:.55)*st.P.air:st.steer*2.0*st.P.turn*(wet?st.P.wturn/st.P.turn:1)*grip*dv);
   st.h-=rate*dt;if(dr.active)dr.yaw=(dr.yaw||0)+Math.abs(rate*dt)*57.2958;
   if(st.bill>0){const k=(bi+8)%N;st.h+=clamp((D3?d3Aim(st,3):wrap(Math.atan2(S[k].x-st.x,S[k].z-st.z)-st.h))*4,-1,1)*3.2*dt;st.v=appr(st.v,maxV,70*dt);dr.active=false;} // 右旋回 = 角度減少
   {const sl=Math.min(sf.sl,st.ink>0?.935:1),sA=clamp((1-sl)/.15,0,1);if(st.ma===undefined||sA===0||air)st.ma=st.h;else st.ma+=wrap(st.h-st.ma)*Math.min(1,dt*(14-11.5*sA));if(D3)d3Move(st,dt,wrap(st.ma-st.h));else{st.x+=Math.sin(st.ma)*st.v*dt;st.z+=Math.cos(st.ma)*st.v*dt;}}
@@ -5656,12 +5661,12 @@ function step(dt){
   gimStep(dt,bi);
   world(dt,bi);
   // ジャンプ
-  if(air){st.vy-=32*dt;st.y+=st.vy*dt;if(st.y<0){st.y=0;st.vy=0;}}
+  if(air){st.vy-=((wet?24:32)+(wet&&st.ja&&st.jaVert&&K.up?12:0))*dt;st.y+=st.vy*dt;if(st.y<0){st.y=0;st.vy=0;}}
   // 見た目
   const tv=dr.active?dr.dir*(.42+.12*st.steer*dr.dir)*(1-.18*Math.min(1,sAng/FASTA))*(insideDrift()?.5:1):0;st.vis+=(tv-st.vis)*Math.min(1,dt*9);
   const bump=off&&sp>5?Math.sin(st.t*70)*.05*Math.min(1,sp/20):0;
   if(D3)d3Pose(kart,st,st.y+Math.abs(bump),-st.vis+st.spinA);else{kart.position.set(st.x,st.gy+st.y+Math.abs(bump),st.z);kart.rotation.y=st.h-st.vis+st.spinA;}
-  body.rotation.z+=(st.steer*.06*Math.min(1,sp/MAXV)+(dr.active?-dr.dir*(insideDrift()?.16:.05):0)-body.rotation.z)*Math.min(1,dt*8);
+  body.rotation.z+=(st.steer*.06*Math.min(1,sp/MAXV)+(dr.active?-dr.dir*(insideDrift()?.16:.05)*(wet?2.2:1):0)-body.rotation.z)*Math.min(1,dt*8);
   st.wheelRot=st.v*dt;
   wheels.forEach(w=>{w.m.rotation.x+=st.wheelRot/w.r;if(w.front)w.piv.rotation.y=-st.steer*.42;});
   head.rotation.y=-st.steer*.3;head.rotation.z=-st.steer*.12;sw.rotation.z=st.steer*1.0;
@@ -5733,13 +5738,14 @@ function dbgPos(){
     const hit=RD.raycast(P.x+U.x*1.5,P.y+U.y*1.5,P.z+U.z*1.5,-U.x,-U.y,-U.z,40,_pdHit);
     const kind=hit?((RD.surf&&RD.surf[_pdHit.tri])?'ダート':(RD.jgRoad&&RD.jgRoad[_pdHit.tri]?'路面':'追加床')):'なし';
     const state=st.fell?'落下':st.glide?'滑空':st.fly?'飛行':(st.air3>.05?'空中 '+st.air3.toFixed(1)+'s':'接地');
+    const mode=st.glide?'グライダー':st.ag?'反重力':st.wet?'水中':'地上';   // 走行状態
     const wx=P.x.toFixed(f),wy=P.y.toFixed(f),wz=P.z.toFixed(f),gx=(P.x/sc).toFixed(f),gy=(P.y/sc+y0).toFixed(f),gz=(P.z/sc).toFixed(f);
     const lat=fr?fr.lat.toFixed(1)+' / ±'+fr.hw.toFixed(1)+(Math.abs(fr.lat)>fr.hw?' (コース外)':''):'—';
-    const gap=_pdGap();_pdLine='['+(W.id||'?')+'] gate '+gi+'/'+G+' (進行 '+prog.toFixed(2)+') 1位との距離 '+(gap?gap.u.toFixed(0)+'units':'—')+' world('+wx+', '+wy+', '+wz+') glb('+gx+', '+gy+', '+gz+') 横 '+lat+' 床:'+kind+(hit?' 下'+(_pdHit.t-1.5).toFixed(2):'')+' '+state;
+    const gap=_pdGap();_pdLine='['+(W.id||'?')+'] gate '+gi+'/'+G+' (進行 '+prog.toFixed(2)+') 1位との距離 '+(gap?gap.u.toFixed(0)+'units':'—')+' world('+wx+', '+wy+', '+wz+') glb('+gx+', '+gy+', '+gz+') 横 '+lat+' 床:'+kind+(hit?' 下'+(_pdHit.t-1.5).toFixed(2):'')+' '+state+' 状態:'+mode;
     if(_pdPrev&&!hit){_pdLog.push({txt:_pdLine});if(_pdLog.length>30)_pdLog.shift();}
     _pdPrev=!!hit;
     const rec=_pdLog.slice(-4).map(l=>'<div style="opacity:.8;font-size:11px">'+l.txt.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div>').join('');
-    _pdBox.innerHTML='<b>位置 [F4]</b> world:'+(W.id||'?')+'<br>ゲート <b>'+gi+'</b> / '+G+'　進行 '+prog.toFixed(2)+'<br>'+_pdGapHtml(gap)+'<br>world　x '+wx+'　y '+wy+'　z '+wz+'<br>GLB　　x '+gx+'　y '+gy+'　z '+gz+'<br>横 '+lat+'　高 '+(fr?fr.hgt.toFixed(1):'—')+'<br>床: <b style="color:'+(hit?'#7ee787':'#ff7b72')+'">'+kind+'</b>'+(hit?' 下'+(_pdHit.t-1.5).toFixed(2):'')+'　'+state+(_pdLog.length?'<div style="margin-top:4px;border-top:1px solid #456;padding-top:3px"><b>床なし記録 '+_pdLog.length+'件</b>'+rec+'</div>':'');
+    _pdBox.innerHTML='<b>位置 [F4]</b> world:'+(W.id||'?')+'<br>ゲート <b>'+gi+'</b> / '+G+'　進行 '+prog.toFixed(2)+'<br>'+_pdGapHtml(gap)+'<br>world　x '+wx+'　y '+wy+'　z '+wz+'<br>GLB　　x '+gx+'　y '+gy+'　z '+gz+'<br>横 '+lat+'　高 '+(fr?fr.hgt.toFixed(1):'—')+'<br>床: <b style="color:'+(hit?'#7ee787':'#ff7b72')+'">'+kind+'</b>'+(hit?' 下'+(_pdHit.t-1.5).toFixed(2):'')+'　'+state+'<br>走行状態: <b style="color:'+({'グライダー':'#f2cc60','反重力':'#79c0ff','水中':'#56d4dd','地上':'#7ee787'})[mode]+'">'+mode+'</b>'+(_pdLog.length?'<div style="margin-top:4px;border-top:1px solid #456;padding-top:3px"><b>床なし記録 '+_pdLog.length+'件</b>'+rec+'</div>':'');
   }catch(e){_pdErr=true;console.warn('posdbg disabled',e);if(_pdBox)_pdBox.style.display='none';}
 }
 /* ---------- 加速時の集中線（スピードライン） ----------
