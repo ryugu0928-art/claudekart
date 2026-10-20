@@ -94,9 +94,29 @@ kbd{background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px;font-famil
 #cupSel .cc b{font-size:15px}#cupSel .cc small{opacity:.65}
 #cupSel .mdc ul{margin:6px 0 0;padding-left:18px;opacity:.85}
 @media(max-width:640px){#cupSel .cgrid{grid-template-columns:repeat(2,1fr)}}
+#mainMenu{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:16px;background:radial-gradient(ellipse at 50% 30%,#1c2a55,#070b18 70%);color:#fff;font-family:system-ui,sans-serif;overflow:auto}
+#mainMenu h1{margin:0;font-size:clamp(34px,8vw,72px);letter-spacing:.08em;text-shadow:0 4px 0 #c0392b,0 0 24px #ff6b4a88}
+#mainMenu h1 small{display:block;font-size:.3em;letter-spacing:.3em;opacity:.8;text-shadow:none}
+#mmPlay{font-size:26px;font-weight:700;padding:14px 64px;border:0;border-radius:40px;background:linear-gradient(#ffd84a,#ff9a1a);color:#3a1d00;cursor:pointer;box-shadow:0 5px 0 #b86400}
+#mmPlay:active{transform:translateY(3px);box-shadow:0 2px 0 #b86400}
+#mmUp{width:min(560px,100%);max-height:34vh;overflow:auto;background:#0009;border:1px solid #fff3;border-radius:12px;padding:12px 16px;box-sizing:border-box}
+#mmUp h2{margin:0 0 8px;font-size:16px}
+#mmUp div{padding:6px 0;border-top:1px solid #fff2;font-size:14px;line-height:1.5}
+#mmUp time{display:block;font-size:12px;color:#8fd0ff}
 </style>
 </head>
 <body>
+<div id="mainMenu"><h1>KART 8<small>クロードカップ</small></h1><button id="mmPlay" onclick="document.getElementById('mainMenu').style.display='none'">PLAY</button>
+<div id="mmUp"><h2>アップデート情報</h2><div id="mmUpList"></div></div></div>
+<script>
+/* ★修正のたびに、配列の先頭へ { d:'修正日時', t:'内容' } を1行追加する（新しい順） */
+const UPDATES=[
+{d:'2026-10-20 19:53',t:'メニュー画面（タイトル／PLAY／アップデート情報）を追加'},
+{d:'2026-10-20 19:49',t:'グライダーの降下速度を調整（少し速く）'},
+{d:'2026-10-20 16:28',t:'グライダーにベクトリング（ミニターボ解放中の斜め後ろ入力で上＋横へ移動）を追加'},
+{d:'2026-10-20 16:21',t:'マリオカートスタジアムのダッシュ板に加速判定を追加'}];
+document.getElementById('mmUpList').innerHTML=UPDATES.map(u=>'<div><time>'+u.d+'</time>'+u.t+'</div>').join('');
+</script>
 <canvas id="gl"></canvas><canvas id="spdfx"></canvas><div id="dim"></div>
 <canvas id="map" width="150" height="150"></canvas>
 <div id="items"><i id="s0"></i><i id="s1"></i></div><div id="lapbox"><b id="pos">1位</b><b id="lap">LAP 1/3</b><span id="time">0:00.00</span></div><div id="ink"></div><div id="flash"></div><button id="custBtn" onclick="toggleCust()">カスタム (C)</button><div id="cust"></div><div id="cupSel"></div><button id="cupBtn" onclick="toggleCup()">メニュー (V)</button><div id="toast"></div><div id="count"></div><div id="result"></div>
