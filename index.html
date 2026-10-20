@@ -111,6 +111,7 @@ kbd{background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px;font-famil
 <script>
 /* ★修正のたびに、配列の先頭へ { d:'修正日時', t:'内容' } を1行追加する（新しい順） */
 const UPDATES=[
+{d:'2026-10-20 19:57',t:'PLAYを押すまでゲームを停止するように変更'},
 {d:'2026-10-20 19:53',t:'メニュー画面（タイトル／PLAY／アップデート情報）を追加'},
 {d:'2026-10-20 19:49',t:'グライダーの降下速度を調整（少し速く）'},
 {d:'2026-10-20 16:28',t:'グライダーにベクトリング（ミニターボ解放中の斜め後ろ入力で上＋横へ移動）を追加'},
@@ -5809,7 +5810,8 @@ const SPFX=(()=>{
     g.globalAlpha=1;
   }};
 })();
-function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(!paused)step(dt);SPFX.update(paused?0:dt);dbgPos();renderer.render(scene,camera);requestAnimationFrame(loop);}
+const MMENU=document.getElementById('mainMenu');   // メニュー表示中はゲームを止める
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;const hold=paused||MMENU.style.display==='none'?paused:true;if(!hold)step(dt);SPFX.update(hold?0:dt);dbgPos();renderer.render(scene,camera);requestAnimationFrame(loop);}
 requestAnimationFrame(loop);
 
 /* ---------- 空中物理シミュレーター（計算機 改良版から移植／カスタム画面内） ---------- */
