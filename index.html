@@ -10,6 +10,7 @@
 :root[data-theme="dark"]{--fg:#fff;--bg:rgba(10,14,30,.55)}
 html,body{margin:0;height:100%;background:#7fc4ff;overflow:hidden;font-family:"Hiragino Sans","Yu Gothic",system-ui,sans-serif;color:var(--fg)}
 canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+canvas#spdfx{position:fixed;inset:0;width:100%;height:100%;display:none;pointer-events:none}   /* 加速時の集中線(3D画面の上・HUDの下) */
 #hud{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--bg);border-radius:14px;padding:10px 18px 14px;min-width:170px;text-align:right}
 #spd{font-size:54px;font-weight:900;font-style:italic;line-height:1;letter-spacing:-1px}
 #hud small{font-size:13px;opacity:.8;margin-left:4px}
@@ -96,7 +97,7 @@ kbd{background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px;font-famil
 </style>
 </head>
 <body>
-<canvas id="gl"></canvas><div id="dim"></div>
+<canvas id="gl"></canvas><canvas id="spdfx"></canvas><div id="dim"></div>
 <canvas id="map" width="150" height="150"></canvas>
 <div id="items"><i id="s0"></i><i id="s1"></i></div><div id="lapbox"><b id="pos">1位</b><b id="lap">LAP 1/3</b><span id="time">0:00.00</span></div><div id="ink"></div><div id="flash"></div><button id="custBtn" onclick="toggleCust()">カスタム (C)</button><div id="cust"></div><div id="cupSel"></div><button id="cupBtn" onclick="toggleCup()">メニュー (V)</button><div id="toast"></div><div id="count"></div><div id="result"></div>
 <div id="hud"><div id="coin"><canvas class="cn" id="cnv" width="64" height="64"></canvas><b id="coinN">0</b><span>/10</span></div><span id="spd">0</span><small>km/h</small><div id="meter"><i></i></div><div id="tot"></div><div id="mtl"></div><div id="dang"></div><canvas id="agauge" width="220" height="70"></canvas><div id="dyaw"></div><div id="dsurf"></div></div>
@@ -4621,8 +4622,10 @@ function loadCourse(ci){const d=COURSES[ci];curW=d.glb?D3WORLDS[d.w||'stad']:nul
     (dbl?[-1.1,1.1]:[0]).forEach(o=>{const m=new THREE.Mesh(bg,dbl?bmD:bm);m.position.set(cx+R[k].x*o,2+b.gy,cz+R[k].z*o);CG.add(m);b.ms.push(m);});boxes.push(b);});});
   // バナナ（固定）
   bananas.forEach(b=>scene.remove(b.m));bananas.length=0;
-  const bn=d.bn||(()=>{const a=[];for(let k=90;k<N-30;k+=70)a.push(k);return a;})();
-  bn.forEach((k,i)=>{const l=itemLat(k,i%2?-4:4);GBI=k;if(!inHole(k))addBanana(S[k].x+R[k].x*l,S[k].z+R[k].z*l,true);});
+  // 【変更】道端にデフォルトで落ちている固定バナナは配置しない（アイテムで置いたバナナは従来どおり）。戻す場合は DEFAULT_BANANAS=true
+  const DEFAULT_BANANAS=false;
+  if(DEFAULT_BANANAS){const bn=d.bn||(()=>{const a=[];for(let k=90;k<N-30;k+=70)a.push(k);return a;})();
+  bn.forEach((k,i)=>{const l=itemLat(k,i%2?-4:4);GBI=k;if(!inHole(k))addBanana(S[k].x+R[k].x*l,S[k].z+R[k].z*l,true);});}
 }
 
 
@@ -5739,7 +5742,43 @@ function dbgPos(){
     _pdBox.innerHTML='<b>位置 [F4]</b> world:'+(W.id||'?')+'<br>ゲート <b>'+gi+'</b> / '+G+'　進行 '+prog.toFixed(2)+'<br>'+_pdGapHtml(gap)+'<br>world　x '+wx+'　y '+wy+'　z '+wz+'<br>GLB　　x '+gx+'　y '+gy+'　z '+gz+'<br>横 '+lat+'　高 '+(fr?fr.hgt.toFixed(1):'—')+'<br>床: <b style="color:'+(hit?'#7ee787':'#ff7b72')+'">'+kind+'</b>'+(hit?' 下'+(_pdHit.t-1.5).toFixed(2):'')+'　'+state+(_pdLog.length?'<div style="margin-top:4px;border-top:1px solid #456;padding-top:3px"><b>床なし記録 '+_pdLog.length+'件</b>'+rec+'</div>':'');
   }catch(e){_pdErr=true;console.warn('posdbg disabled',e);if(_pdBox)_pdBox.style.display='none';}
 }
-function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(!paused)step(dt);dbgPos();renderer.render(scene,camera);requestAnimationFrame(loop);}
+/* ---------- 加速時の集中線（スピードライン） ----------
+   ブースト(キノコ/ダッシュ板)・ミニターボ・キラー・スター中に、画面中央から外へ流れる放射状の線を重ねる。
+   線は外側ほど加速して伸び(遠近感)、開始/終了はなめらかにフェード。カート周辺(画面中央下)には線を出さない。 */
+const SPFX=(()=>{
+  const cv=document.getElementById('spdfx');if(!cv)return{update(){}};
+  const g=cv.getContext('2d'),NL=110,L=[],RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W=2,H=2,k=0,tm=0,vig=null,shown=false;
+  function size(){const d=Math.min(devicePixelRatio||1,1.5);W=cv.width=Math.max(2,Math.round(innerWidth*d));H=cv.height=Math.max(2,Math.round(innerHeight*d));vig=null;}
+  function spawn(l,init){l.a=Math.random()*Math.PI*2;l.p=init?Math.random():Math.random()*.08;l.sp=.75+Math.random()*.9;l.len=.18+Math.random()*.3;l.w=.8+Math.random()*2.6;l.al=.35+Math.random()*.55;l.ph=Math.random()*6.28;}
+  for(let i=0;i<NL;i++){const l={};spawn(l,true);L.push(l);}
+  size();addEventListener('resize',size);
+  const ease=p=>p*p*(1.6-.6*p);   // 外側ほど速く進む(手前に迫る見え方)
+  return{update(dt){
+    const on=!paused&&phase==='race'&&(st.boost>0||st.mt>0||st.bill>0||st.star>0);
+    const tgt=on?(RM?.45:1)*(.7+.3*Math.min(1,Math.abs(st.v)/BOOSTV)):0;
+    k+=(tgt-k)*Math.min(1,dt*(tgt>k?7:3.2));if(dt>0)tm+=dt;
+    if(k<.01){if(shown){g.clearRect(0,0,W,H);cv.style.display='none';shown=false;}return;}
+    if(!shown){cv.style.display='block';shown=true;}
+    g.clearRect(0,0,W,H);
+    const cx=W*.5,cy=H*.46,out=Math.hypot(W,H)*.53,inn=Math.min(W,H)*.34;
+    // 画面の縁をうっすら白く(風圧のにじみ)
+    if(!vig){vig=g.createRadialGradient(cx,cy,Math.min(W,H)*.3,cx,cy,out);vig.addColorStop(0,'rgba(255,255,255,0)');vig.addColorStop(1,'rgba(255,255,255,.28)');}
+    g.globalAlpha=k*.55;g.fillStyle=vig;g.fillRect(0,0,W,H);
+    g.lineCap='round';g.strokeStyle='#fff';
+    const sc=Math.min(W,H)/720;
+    for(const l of L){
+      l.p+=l.sp*dt*(.55+1.1*k);if(l.p>=1)spawn(l,false);
+      const ph=l.p,t0=Math.max(0,ph-l.len),r1=inn+(out-inn)*ease(ph),r0=inn+(out-inn)*ease(t0);
+      const ca=Math.cos(l.a),sa=Math.sin(l.a),fl=.8+.2*Math.sin(tm*38+l.ph);
+      g.globalAlpha=k*l.al*fl*Math.min(1,ph*5)*(.3+.7*ph);
+      g.lineWidth=l.w*sc*(.6+ph*1.2);
+      g.beginPath();g.moveTo(cx+ca*r0,cy+sa*r0);g.lineTo(cx+ca*r1,cy+sa*r1);g.stroke();
+    }
+    g.globalAlpha=1;
+  }};
+})();
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(!paused)step(dt);SPFX.update(paused?0:dt);dbgPos();renderer.render(scene,camera);requestAnimationFrame(loop);}
 requestAnimationFrame(loop);
 
 /* ---------- 空中物理シミュレーター（計算機 改良版から移植／カスタム画面内） ---------- */
