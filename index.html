@@ -111,7 +111,7 @@ kbd{background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px;font-famil
 <script>
 /* ★修正のたびに、配列の先頭へ { d:'修正日時', t:'内容' } を1行追加する（新しい順） */
 const UPDATES=[
-{d:'2026-10-21 12:16',t:'反重力板（ef_gravityboard）に乗ると反重力状態になり、タイヤが横向きになるようにした（出口の板で解除）'},
+{d:'2026-10-21 12:16',t:'反重力板（ef_gravityboard）に乗ると反重力状態になりタイヤが横向きになる。解除：スタジアム=グライダー展開時／ウォーターパーク=ゲート79／スイーツ=ゲート110'},
 {d:'2026-10-21 11:29',t:'グライダー初速をボードに乗った瞬間に付与するよう変更し、強さを1.35倍に変更'},
 {d:'2026-10-20 22:20',t:'グライダーボードに乗った時の初速を追加'},
 {d:'2026-10-20 21:19',t:'スタジアム・ウォーターパーク・スイーツキャニオンを「キノコカップ」にまとめた'},
@@ -4147,6 +4147,7 @@ function d3Place(o,x,z,h,hint){d3Init(o);const U=o.U3.set(0,1,0);
   o.F3.set(Math.sin(h),0,Math.cos(h));o.F3.addScaledVector(U,-o.F3.dot(U)).normalize();
   o.h=h;o.h3=h;o.pp3.copy(o.P3);o.fly=false;o.air3=0;o.fell=false;o.gi=GT.length-1;o.CU.copy(U);o.CF.copy(o.F3);o.V3.set(0,0,0);o.x=x;o.z=z;o.gy=o.P3.y;}
 function d3PlaceAll(){mkGates();for(const o of [st,...rivals])d3Place(o,o.x,o.z,o.h,0);}
+const AG_REL={wp:79,sweet:110};   // 反重力の解除ゲート
 function sense(o,dt){const P=o.P3,U=o.U3,F=o.F3;_X.crossVectors(U,F);let n=0,dn=0,wn=0,dsh=0,gsh=0,grb=0;_a.set(0,0,0);
   const TL=WORLD.cfg&&WORLD.cfg.maxTilt,TA=sense._t||(sense._t=[0,0,0,0,0]),TS=sense._s||(sense._s=[0,0,0,0,0]),TN=sense._n||(sense._n=[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]);let good=0;
   for(let k=0;k<5;k++){const a=SOFF[k][0],b=SOFF[k][1];_ok[k]=rayDn(P.x+_X.x*a+F.x*b,P.y+_X.y*a+F.y*b,P.z+_X.z*a+F.z*b,U,WORLD.up||1.5,1.3)?1:0;
@@ -4159,8 +4160,9 @@ function sense(o,dt){const P=o.P3,U=o.U3,F=o.F3;_X.crossVectors(U,F);let n=0,dn=
   if(!n)return false;
   /* ダッシュ板（ef_dashboard）：接地点のどれかが板に乗っていれば加速（0.4秒のクールダウン） */
   if(dsh>0&&!o.fly&&phase==='race'&&!(st.t<(o.padT||0))){o.padT=st.t+.4;o.boost=Math.max(o.boost||0,.9);o.ink=0;if(o===st){st.shake=Math.max(st.shake,.2);blip(520,.1);}}
-  /* 反重力板（ef_gravityboard）：板に乗るたびに反重力状態を切り替える（入口の板でON→出口の板でOFF）。1.2秒のクールダウン。レース外ではOFF */
-  if(phase!=='race')o.agr=false;else if(grb>0){if(!o._onGB&&!(st.t<(o.agT0||0))){o.agr=!o.agr;o.agT0=st.t+1.2;if(o===st&&o.agr)$t('反重力！');}o._onGB=true;}else o._onGB=false;
+  /* 反重力板（ef_gravityboard）に乗るとON。解除は下のAG_REL地点。レース外ではOFF */
+  if(phase!=='race')o.agr=false;else{if(grb>0){if(!o._onGB&&!o.agr){o.agr=true;o.agG=o.gi;if(o===st)$t('反重力！');}o._onGB=true;}else o._onGB=false;
+    const rg=AG_REL[WORLD&&WORLD.id];if(o.agr&&typeof rg==='number'&&o.agG<rg&&o.gi>=rg)o.agr=false;}   // 解除地点：ウォーターパーク=ゲート79／スイーツ=分離地帯を抜けるJA地点(ゲート110)。スタジアムはグライダー展開時(d3GlStart)
   /* グライダーボード（ef_glideboard）に乗った瞬間：空中最高速度のGLP.boardInit倍の初速を与える（0.6秒クールダウン） */
   if(gsh>0&&!o.fly&&phase==='race'&&!(st.t<(o.gbT||0))){o.gbT=st.t+.6;const bv=glFrom(o).vmax*GLP.boardInit;if(o.v<bv)o.v=bv;if(o===st){st.shake=Math.max(st.shake,.2);blip(620,.12);}}
   if(_ok[1]&&_ok[2]&&_ok[3]&&_ok[4]){_t1.subVectors(_pts[3],_pts[4]);_t2.subVectors(_pts[1],_pts[2]);_n.crossVectors(_t1,_t2);if(_n.lengthSq()>1e-8)_n.normalize();else _n.copy(_a).normalize();}
@@ -4170,7 +4172,7 @@ function sense(o,dt){const P=o.P3,U=o.U3,F=o.F3;_X.crossVectors(U,F);let n=0,dn=
   U.lerp(_n,1-Math.exp(-dt*16)).normalize();F.addScaledVector(U,-F.dot(U)).normalize();return true;}
 /* 【追加】グライダーパネルは「通過すると展開する」仕掛け：段差が低くて接地が切れなくても、パネル(空中ゲート)通過で展開する。調整は D3_GLPANEL */
 const D3_GLPANEL={on:true,upR:.3,t:1,minV:3,fw0:-1,fw1:3.7,lat:5.6,jaLead:6};   // fw0/fw1:パネルの前後範囲 lat:パネルの半幅(ゲート基準・見た目の炎メッシュの実寸) jaLead:JA受付の手前距離   // upR:展開時の上向き初速(滑空速度比。ゲーム内の沈下は約0.69倍/秒と速いので低いと即着地する) t:その初速を0へ減衰させつつ接地判定を無視する秒数 minV:展開に必要な最低速度
-function d3GlStart(o){o.glide=true;o.gs=glFrom(o);o.gv=o.v;o._dp=(o===st)&&!!((phase==='race'?GK:ZK).drift);o.lowT=0;o.lowDone=false;o.roll=0;o.gu=0;o.gth=0;o.gvs=0;o._gdy=null;if(o===st)GLLOG.length=0;d3Ev(o,'glide');if(o===st)$t('グライダー展開！ '+o.gs.name+'（'+o.gs.grp+'系・空中速度Lv'+o.gs.sl+'／操作Lv'+o.gs.hl+'）');o._glp=true;if(D3_GLPANEL.on){o._gForce=D3_GLPANEL.t;o.V3.addScaledVector(o.U3,D3_GLPANEL.upR*o.gv);}if(WORLD&&WORLD.id==='sweet'&&D3_CANNON.on)d3CannonStart(o);}   // 展開(通常の接地切れ/パネル通過とも)直後に打ち上げ：低い段差でも即着地しない／スイーツのグライダー板では大砲グライダー
+function d3GlStart(o){o.glide=true;o.agr=false;o.gs=glFrom(o);o.gv=o.v;o._dp=(o===st)&&!!((phase==='race'?GK:ZK).drift);o.lowT=0;o.lowDone=false;o.roll=0;o.gu=0;o.gth=0;o.gvs=0;o._gdy=null;if(o===st)GLLOG.length=0;d3Ev(o,'glide');if(o===st)$t('グライダー展開！ '+o.gs.name+'（'+o.gs.grp+'系・空中速度Lv'+o.gs.sl+'／操作Lv'+o.gs.hl+'）');o._glp=true;if(D3_GLPANEL.on){o._gForce=D3_GLPANEL.t;o.V3.addScaledVector(o.U3,D3_GLPANEL.upR*o.gv);}if(WORLD&&WORLD.id==='sweet'&&D3_CANNON.on)d3CannonStart(o);}   // 展開(通常の接地切れ/パネル通過とも)直後に打ち上げ：低い段差でも即着地しない／スイーツのグライダー板では大砲グライダー
 function d3GlPanel(o){if(!D3_GLPANEL.on||o.glide||o.fell)return;const ag=GT.findIndex(g=>g.air);if(ag<0)return;if(o.gi<ag-2)o._glp=false;
   if(o._glp||o.gi!==ag||o.v<D3_GLPANEL.minV)return;const g=GT[ag],P=o.P3;_t2.subVectors(P,g.c);if(o===st){const fw=_t2.dot(g.n);if(Math.abs(_t2.dot(g.x))>D3_GLPANEL.lat||fw<D3_GLPANEL.fw0||fw>D3_GLPANEL.fw1+Math.max(0,o.v)*.04)return;}else if(_t2.length()>45||Math.abs(_t2.dot(g.x))>g.hw)return;
   o.fly=true;o.air3=0;o.V3.copy(o.F3).multiplyScalar(o.v);d3GlStart(o);if(o===st)st.rampT=0;}   // 滑空開始から0.35秒はJA受付(rampT起点)
