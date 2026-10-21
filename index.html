@@ -111,6 +111,7 @@ kbd{background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px;font-famil
 <script>
 /* ★修正のたびに、配列の先頭へ { d:'修正日時', t:'内容' } を1行追加する（新しい順） */
 const UPDATES=[
+{d:'2026-10-22 00:18',t:'グライダーボード（ウォーターパークなど斜めのボード）に乗って初速で飛び出すと、空中でグライダーが起動するよう修正'},
 {d:'2026-10-21 15:53',t:'こうら・ボム兵・ファイアなど、地面を進むアイテムも傾斜に合わせて傾くよう修正'},
 {d:'2026-10-21 13:54',t:'バナナ（設置・投げたもの）とコインが、コースの傾斜（地面の向き）に合わせて傾くよう修正'},
 {d:'2026-10-21 13:47',t:'アイテムボックスが、コースの地面の向き（傾斜）に合わせて配置・回転するよう修正'},
@@ -4168,6 +4169,7 @@ function sense(o,dt){const P=o.P3,U=o.U3,F=o.F3;_X.crossVectors(U,F);let n=0,dn=
   if(phase!=='race')o.agr=false;else{if(grb>0){if(!o._onGB&&!o.agr){o.agr=true;o.agG=o.gi;if(o===st)$t('反重力！');}o._onGB=true;}else o._onGB=false;
     const rg=AG_REL[WORLD&&WORLD.id];if(o.agr&&typeof rg==='number'&&o.agG<rg&&o.gi>=rg)o.agr=false;}   // 解除地点：ウォーターパーク=ゲート79／スイーツ=分離地帯を抜けるJA地点(ゲート110)。スタジアムはグライダー展開時(d3GlStart)
   /* グライダーボード（ef_glideboard）に乗った瞬間：空中最高速度のGLP.boardInit倍の初速を与える（0.6秒クールダウン） */
+  if(gsh>0&&!o.fly&&phase==='race')o.gbOn=st.t;   // グライダーボードに乗っていた時刻（斜めのボードから飛び出した時の滑空起動に使う）
   if(gsh>0&&!o.fly&&phase==='race'&&!(st.t<(o.gbT||0))){o.gbT=st.t+.6;const bv=glFrom(o).vmax*GLP.boardInit;if(o.v<bv)o.v=bv;if(o===st){st.shake=Math.max(st.shake,.2);blip(620,.12);}}
   if(_ok[1]&&_ok[2]&&_ok[3]&&_ok[4]){_t1.subVectors(_pts[3],_pts[4]);_t2.subVectors(_pts[1],_pts[2]);_n.crossVectors(_t1,_t2);if(_n.lengthSq()>1e-8)_n.normalize();else _n.copy(_a).normalize();}
   else _n.copy(_a).normalize();
@@ -4207,7 +4209,7 @@ function d3Move(o,dt,slip){d3Init(o);const P=o.P3,U=o.U3,F=o.F3;if(!o.fly)o.cann
   o.pp3.copy(P);
   if(!o.fly){_d.copy(F);if(slip)rotAbout(_d,U,slip);P.addScaledVector(_d,o.v*dt);
     if(!sense(o,dt)){o.fly=true;o.air3=0;o.V3.copy(_d).multiplyScalar(o.v);d3Ev(o,'lost');
-      const ag=GT.findIndex(g=>g.air);if(ag>=0&&o.gi>=ag-2&&o.gi<=ag&&P.distanceTo(GT[ag].c)<45){d3GlStart(o);}}else d3GlPanel(o);}
+      const ag=GT.findIndex(g=>g.air);if((ag>=0&&o.gi>=ag-2&&o.gi<=ag&&P.distanceTo(GT[ag].c)<45)||(phase==='race'&&st.t-(o.gbOn||-99)<1.2)){d3GlStart(o);}}else d3GlPanel(o);}   // グライダーボード(斜め)から初速で飛び出して空中に出たら、その場でグライダー起動
   else{o.air3+=dt;
     if(o.cannon){d3CannonStep(o,dt);}else{
     if(o.glide){const gs=o.gs,KK=(phase==='race')?GK:ZK;let pitch=0;
