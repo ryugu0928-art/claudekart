@@ -111,6 +111,8 @@ kbd{background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px;font-famil
 <script>
 /* ★修正のたびに、配列の先頭へ { d:'修正日時', t:'内容' } を1行追加する（新しい順） */
 const UPDATES=[
+{d:'2026-10-21 13:47',t:'アイテムボックスが、コースの地面の向き（傾斜）に合わせて配置・回転するよう修正'},
+{d:'2026-10-21 13:45',t:'傾斜のあるコースで、防御中・トリプルアイテムの位置がカートの向き（傾き）に合うように修正'},
 {d:'2026-10-21 12:16',t:'反重力板（ef_gravityboard）に乗ると反重力状態になりタイヤが横向きになる。解除：スタジアム=グライダー展開時／ウォーターパーク=ゲート79／スイーツ=ゲート110'},
 {d:'2026-10-21 11:29',t:'グライダー初速をボードに乗った瞬間に付与するよう変更し、強さを1.35倍に変更'},
 {d:'2026-10-20 22:20',t:'グライダーボードに乗った時の初速を追加'},
@@ -5105,7 +5107,11 @@ function mkFx(n){
 function orbitFx(o){const q=o.slots[0],orb=o.fx.orbs;let n=0;
   if(q&&!o.roul){if(q.id==='m8')n=Math.min(q.q.length,orb.length);else if(['banana','green','red','mush'].includes(q.id)&&(q.n>1||q.tri))n=Math.min(q.n,orb.length);else if(o.hold&&HOLD.has(q.id))n=-1;}
   orb.forEach((m,i)=>{if(n===-1?i===0:i<n){m.visible=true;
-    if(n===-1)m.position.set(o.x-Math.sin(o.h)*2.8,.9+(o.gy||0),o.z-Math.cos(o.h)*2.8);
+    const d3=D3&&o.P3&&o.U3&&o.F3&&!o.glide;   // 3Dコースの傾斜：カートの上方向U3・前方向F3に合わせて配置（防御アイテム／トリプルアイテム）
+    if(d3){const U=o.U3,F=o.F3,P=o.P3,rx=U.y*F.z-U.z*F.y,ry=U.z*F.x-U.x*F.z,rz=U.x*F.y-U.y*F.x;   // 右方向 R=U×F
+      if(n===-1)m.position.set(P.x-F.x*2.8+U.x*.9,P.y-F.y*2.8+U.y*.9,P.z-F.z*2.8+U.z*.9);
+      else{const a=st.t*3+i*6.283/(q.tri?3:n),c=Math.cos(a)*2.4,sn=Math.sin(a)*2.4;m.position.set(P.x+rx*c+F.x*sn+U.x*.9,P.y+ry*c+F.y*sn+U.y*.9,P.z+rz*c+F.z*sn+U.z*.9);}}
+    else if(n===-1)m.position.set(o.x-Math.sin(o.h)*2.8,.9+(o.gy||0),o.z-Math.cos(o.h)*2.8);
     else{const a=st.t*3+i*6.283/(q.tri?3:n);m.position.set(o.x+Math.cos(a)*2.4,.9+(o.gy||0),o.z+Math.sin(a)*2.4);}
     const sm=shellModel(q.id==='m8'?q.q[i]:q.id);if(sm){if(m.geometry!==sm.g){m.geometry=sm.g;m.material=sm.m;}m.scale.setScalar(.8);m.rotation.y=st.t*4;}
     else{if(m.geometry!==m.userData.g0){m.geometry=m.userData.g0;m.material=m.userData.m0;m.scale.setScalar(1);m.rotation.y=0;}
@@ -5157,7 +5163,10 @@ function aiUse(r,dt){
 function actorsUpdate(dt,bi){
   st.prog=pProg;st.bi=bi;
   actors().slice().sort((a,b)=>b.prog-a.prog).forEach((o,i)=>o.rank=i+1);
-  boxes.forEach(b=>{if(b.t>0)b.t-=dt;const show=!tt&&b.t<=0;b.ms.forEach(m=>{m.visible=show;if(show){m.rotation.y+=dt*2;m.rotation.x+=dt*1.3;}});});
+  boxes.forEach(b=>{if(b.t>0)b.t-=dt;const show=!tt&&b.t<=0;b.ms.forEach(m=>{m.visible=show;if(!show)return;
+    const u=m.userData;if(D3&&RD&&u.n===undefined){u.n=null;const _U=new THREE.Vector3(0,1,0);if(rayDn(m.position.x,b.gy||0,m.position.z,_U,6,10)){const nn=new THREE.Vector3(RH.nx,RH.ny,RH.nz).normalize();u.n=nn;u.q=new THREE.Quaternion().setFromUnitVectors(_U,nn);m.position.set(RH.x+nn.x*2,RH.y+nn.y*2,RH.z+nn.z*2);u.a=0;u.qs=new THREE.Quaternion();}}   // 3Dコース：箱の下の路面の向きに合わせる
+    if(u.n){u.a+=dt*2;u.qs.setFromAxisAngle(_Yv,u.a);m.quaternion.copy(u.q).multiply(u.qs);}   // 路面の法線を軸に回転
+    else{m.rotation.y+=dt*2;m.rotation.x+=dt*1.3;}});});
   tryBoxes(st);itemTick(st,dt);projStep(dt);bananaStep(dt);thunderStep(dt);drawSlots();}
 function recover(){if(phase!=='race'||st.bill>0)return;let bi=0,bd=1e9;for(let i=0;i<N;i++){const dx=st.x-S[i].x,dz=st.z-S[i].z,d=dx*dx+dz*dz;if(d<bd){bd=d;bi=i;}}
   if(D3){d3Respawn(st);bi=d3Bi(st);}else{st.x=S[bi].x;st.z=S[bi].z;st.h=Math.atan2(T[bi].x,T[bi].z);}st.camH=st.h;st.cg=undefined;st.v=0;st.y=0;st.vy=0;st.rampT=-1;st.ja=false;st.hop=false;st.boost=0;st.vis=0;st.spin=0;st.spinA=0;dr.active=false;dr.pend=0;dr.lv=0;dr.t=0;dr.c=0;prevBi=bi;st.inv=1.5;
@@ -5822,6 +5831,7 @@ const SPFX=(()=>{
   }};
 })();
 const MMENU=document.getElementById('mainMenu');   // メニュー表示中はゲームを止める
+const _Yv=new THREE.Vector3(0,1,0);
 function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;const hold=paused||MMENU.style.display==='none'?paused:true;if(!hold)step(dt);SPFX.update(hold?0:dt);dbgPos();renderer.render(scene,camera);requestAnimationFrame(loop);}
 requestAnimationFrame(loop);
 
