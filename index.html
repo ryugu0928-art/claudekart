@@ -111,6 +111,8 @@ kbd{background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px;font-famil
 <script>
 /* ★修正のたびに、配列の先頭へ { d:'修正日時', t:'内容' } を1行追加する（新しい順） */
 const UPDATES=[
+{d:'2026-10-20 22:20',t:'グライダーボードに乗った時の初速を追加（空中最高速度の1.2倍から開始）'},
+{d:'2026-10-20 21:19',t:'スタジアム・ウォーターパーク・スイーツキャニオンを「キノコカップ」にまとめた'},
 {d:'2026-10-20 19:57',t:'PLAYを押すまでゲームを停止するように変更'},
 {d:'2026-10-20 19:53',t:'メニュー画面（タイトル／PLAY／アップデート情報）を追加'},
 {d:'2026-10-20 19:49',t:'グライダーの降下速度を調整（少し速く）'},
@@ -3854,7 +3856,7 @@ const GLP={neu:GLR*1.2,kd:.6,kp:.6,exp:1,   // S(u)=neu*(1+k*sgn(u)|u|^exp) ：�
   slew:5,                               // 入力uの追従速度(1/秒)：キーボードの0→1に約0.2秒
   pullSlow:.15,                         // 機首上げ時の前進速度低下（最大）
   low:GLR*.72,lowPull:.35,              // Low Glider：追加沈下率／機首上げ効果の残存率（上昇を抑える）
-  vec:.9,slip:.12,slipR:4,                     // 横速度VS：操作量×Move×slip×VF へ追従（0で従来の横滑りなし）
+  vec:.9,boardInit:1.2,slip:.12,slipR:4,                     // 横速度VS：操作量×Move×slip×VF へ追従（0で従来の横滑りなし）
   thMax:.38,thR:5};                     // 機体ピッチθ最大(rad≒22°)／追従速度
 const GLX={force:null},GLLOG=[];
 function glLog(o,dt){const P=o.P3,V=o.V3,F=o.F3,n=Math.hypot(F.x,F.z)||1,dy=P.y-o.pp3.y,ay=o._gdy==null?0:dy-o._gdy;o._gdy=dy;
@@ -4162,7 +4164,8 @@ function sense(o,dt){const P=o.P3,U=o.U3,F=o.F3;_X.crossVectors(U,F);let n=0,dn=
   U.lerp(_n,1-Math.exp(-dt*16)).normalize();F.addScaledVector(U,-F.dot(U)).normalize();return true;}
 /* 【追加】グライダーパネルは「通過すると展開する」仕掛け：段差が低くて接地が切れなくても、パネル(空中ゲート)通過で展開する。調整は D3_GLPANEL */
 const D3_GLPANEL={on:true,upR:.3,t:1,minV:3,fw0:-1,fw1:3.7,lat:5.6,jaLead:6};   // fw0/fw1:パネルの前後範囲 lat:パネルの半幅(ゲート基準・見た目の炎メッシュの実寸) jaLead:JA受付の手前距離   // upR:展開時の上向き初速(滑空速度比。ゲーム内の沈下は約0.69倍/秒と速いので低いと即着地する) t:その初速を0へ減衰させつつ接地判定を無視する秒数 minV:展開に必要な最低速度
-function d3GlStart(o){o.glide=true;o.gs=glFrom(o);o.gv=o.v;o._dp=(o===st)&&!!((phase==='race'?GK:ZK).drift);o.lowT=0;o.lowDone=false;o.roll=0;o.gu=0;o.gth=0;o.gvs=0;o._gdy=null;if(o===st)GLLOG.length=0;d3Ev(o,'glide');if(o===st)$t('グライダー展開！ '+o.gs.name+'（'+o.gs.grp+'系・空中速度Lv'+o.gs.sl+'／操作Lv'+o.gs.hl+'）');o._glp=true;if(D3_GLPANEL.on){o._gForce=D3_GLPANEL.t;o.V3.addScaledVector(o.U3,D3_GLPANEL.upR*o.gv);}if(WORLD&&WORLD.id==='sweet'&&D3_CANNON.on)d3CannonStart(o);}   // 展開(通常の接地切れ/パネル通過とも)直後に打ち上げ：低い段差でも即着地しない／スイーツのグライダー板では大砲グライダー
+function d3GlStart(o){o.glide=true;o.gs=glFrom(o);o.gv=Math.max(o.v,o.gs.vmax*GLP.boardInit);   /* グライダーボード初速：空中最高速度のGLP.boardInit倍から始まり、徐々に最高速度へ収束 */
+  o._dp=(o===st)&&!!((phase==='race'?GK:ZK).drift);o.lowT=0;o.lowDone=false;o.roll=0;o.gu=0;o.gth=0;o.gvs=0;o._gdy=null;if(o===st)GLLOG.length=0;d3Ev(o,'glide');if(o===st)$t('グライダー展開！ '+o.gs.name+'（'+o.gs.grp+'系・空中速度Lv'+o.gs.sl+'／操作Lv'+o.gs.hl+'）');o._glp=true;if(D3_GLPANEL.on){o._gForce=D3_GLPANEL.t;o.V3.addScaledVector(o.U3,D3_GLPANEL.upR*o.gv);}if(WORLD&&WORLD.id==='sweet'&&D3_CANNON.on)d3CannonStart(o);}   // 展開(通常の接地切れ/パネル通過とも)直後に打ち上げ：低い段差でも即着地しない／スイーツのグライダー板では大砲グライダー
 function d3GlPanel(o){if(!D3_GLPANEL.on||o.glide||o.fell)return;const ag=GT.findIndex(g=>g.air);if(ag<0)return;if(o.gi<ag-2)o._glp=false;
   if(o._glp||o.gi!==ag||o.v<D3_GLPANEL.minV)return;const g=GT[ag],P=o.P3;_t2.subVectors(P,g.c);if(o===st){const fw=_t2.dot(g.n);if(Math.abs(_t2.dot(g.x))>D3_GLPANEL.lat||fw<D3_GLPANEL.fw0||fw>D3_GLPANEL.fw1+Math.max(0,o.v)*.04)return;}else if(_t2.length()>45||Math.abs(_t2.dot(g.x))>g.hw)return;
   o.fly=true;o.air3=0;o.V3.copy(o.F3).multiplyScalar(o.v);d3GlStart(o);if(o===st)st.rampT=0;}   // 滑空開始から0.35秒はJA受付(rampT起点)
@@ -5157,7 +5160,7 @@ function finish(){phase='finish';rank=1+rivals.filter(r=>r.fin).length;if(!tt)cu
   $('result').innerHTML='<h2>'+(tt?'FINISH':rank+'位 / 12')+' '+fmt(raceT)+'</h2><p>今回の獲得コイン <b>'+got+'</b>枚（累計に加算されるのは最大10枚 → +'+add+'）</p><p>累計 <b>'+total+'</b>枚 ・ 通常パーツ '+b+'/52'+(b>a?'（+'+(b-a)+'解放！）':'')+'</p><p>'+nextTxt(total)+'</p>'+(g0&&total>=5000?'<p>ゴールドカイト解放！</p>':'')+''+(tt?'':cupHTML())+'<p class="k">Enter：'+(tt?'もう一度':!isLast()?(vs?'次のコースを選ぶ（今回のゴール順でスタート）':'次のコース「'+COURSES[cupSet[cpos()+1]].n+'」へ（今回のゴール順でスタート）'):'メニューへ')+'　T：'+(tt?'通常レース':'タイムアタック')+'へ</p>';
   $('result').style.display='block';}
 /* ---------- Claude Cup：ゴール順＝次コースのスタート順 ---------- */
-const CUPS=[{n:'クロードカップ',ic:'🪙',c:[0,1,2,3],d:'オリジナル4コース'},{n:'スタジアムカップ',ic:'🏟️',c:[4],d:'GLBモデルのコース'},{n:'ウォーターカップ',ic:'🌊',c:[5],d:'GLBモデルのコース'},{n:'スイーツカップ',ic:'🍰',c:[6],d:'GLBモデルのコース（大砲グライダー区間は未実装）'}];
+const CUPS=[{n:'クロードカップ',ic:'🪙',c:[0,1,2,3],d:'オリジナル4コース'},{n:'キノコカップ',ic:'🍄',c:[4,5,6],d:'マリオカートスタジアム／ウォーターパーク／スイーツキャニオン（大砲グライダー区間は未実装）'}];
 let cupSet=CUPS[0].c.slice(),cupName=CUPS[0].n,vs=false,vsUsed=[];const VSN=4,cpos=()=>cupSet.indexOf(cupI),rNo=()=>vs?vsUsed.length:cpos()+1,rTot=()=>vs?VSN:cupSet.length,isLast=()=>rNo()>=rTot();
 const PTS=[15,12,10,9,8,7,6,5,4,3,2,1];let cupI=0,gridOrder=null,lastOrder=[],cupPts=new Map(),freshCup=true;
 const nm=a=>a===st?'あなた':names.drivers[a.P.b[0]][0];
