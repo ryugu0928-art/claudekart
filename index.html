@@ -111,6 +111,9 @@ kbd{background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px;font-famil
 <script>
 /* ★修正のたびに、配列の先頭へ { d:'修正日時', t:'内容' } を1行追加する（新しい順） */
 const UPDATES=[
+{d:'2026-10-22 10:06',t:'ウォーターパークのグライダーボードが判定されず、初速・グライダー起動が働かなかった不具合を修正（板の名前の判定を部分一致に）'},
+{d:'2026-10-22 10:02',t:'後ろを見るときの画角を少し狭くした（通常の約0.8倍）'},
+{d:'2026-10-22 09:58',t:'ゲームパッドのXボタンを押している間、後ろを見られるようにした'},
 {d:'2026-10-22 09:48',t:'Fキーを押している間、後ろを見られるようにした（本家のXボタン相当）'},
 {d:'2026-10-22 09:14',t:'キーボードの同時押し処理を修正（↑とW、SpaceとShiftなど、同じ操作の別キーが押されたままのとき片方を離しても操作が途切れない）'},
 {d:'2026-10-22 09:11',t:'グライダー：アナログスティックを斜めに倒しても上下入力が目減りしないよう補正（真下と斜め下で機首上げの強さが同じになる）'},
@@ -134,7 +137,7 @@ document.getElementById('mmUpList').innerHTML=UPDATES.map(u=>'<div><time>'+u.d+'
 <canvas id="map" width="150" height="150"></canvas>
 <div id="items"><i id="s0"></i><i id="s1"></i></div><div id="lapbox"><b id="pos">1位</b><b id="lap">LAP 1/3</b><span id="time">0:00.00</span></div><div id="ink"></div><div id="flash"></div><button id="custBtn" onclick="toggleCust()">カスタム (C)</button><div id="cust"></div><div id="cupSel"></div><button id="cupBtn" onclick="toggleCup()">メニュー (V)</button><div id="toast"></div><div id="count"></div><div id="result"></div>
 <div id="hud"><div id="coin"><canvas class="cn" id="cnv" width="64" height="64"></canvas><b id="coinN">0</b><span>/10</span></div><span id="spd">0</span><small>km/h</small><div id="meter"><i></i></div><div id="tot"></div><div id="mtl"></div><div id="dang"></div><canvas id="agauge" width="220" height="70"></canvas><div id="dyaw"></div><div id="dsurf"></div></div>
-<div id="help"><kbd>↑</kbd>/<kbd>W</kbd> アクセル　<kbd>↓</kbd>/<kbd>S</kbd> ブレーキ・バック<br><kbd>←</kbd><kbd>→</kbd>/<kbd>A</kbd><kbd>D</kbd> ハンドル<br><kbd>Space</kbd>/<kbd>Shift</kbd> ミニジャンプ→ドリフト（離すとミニターボ）／ジャンプ台から飛び出す瞬間に押す=ジャンプアクション（着地で加速／台の付け根で早めに飛ぶと低空JA／グライダー展開直後にもう一度押すとローグライダー）<br><kbd>E</kbd>/<kbd>Q</kbd> アイテム（押したまま=後ろに保持して盾／離すと発射 ↑前 ↓後ろ／ルーレットは1秒後に押すと早止め）　<kbd>F</kbd> 押している間うしろを見る　<kbd>R</kbd> ジュゲム復帰(コイン-3)<br><kbd>X</kbd>押しながら方向=ソフトドリフト（角度は<kbd>[</kbd><kbd>]</kbd>で0〜44°／アナログは実際のスティック角）　<kbd>C</kbd> カスタム（キャラ・パーツ）　<kbd>H</kbd> ハンドルアシスト（ゲームパッド対応）<br><kbd>T</kbd> タイムアタック切替（コイン再出現なし）　<kbd>Enter</kbd> リスタート<br>角度の目安：0°=最内側／30°=バランス／40°=ソフト／44.5°超=高速MT不可（境界ギリギリは避ける）。スポーツ系バイクはインサイドドリフト<br>地形：草・土(DIRT)はOFが無効で端×0.7→奥×0.3<br>ダート×ミニジャンプ：空中は接地していないので減速なし／着地で再接地。ダートに入る<b>直前</b>に跳ぶと有効（入ってからでは遅い）。空中は地上より遅いのでR連打は不利</div>
+<div id="help"><kbd>↑</kbd>/<kbd>W</kbd> アクセル　<kbd>↓</kbd>/<kbd>S</kbd> ブレーキ・バック<br><kbd>←</kbd><kbd>→</kbd>/<kbd>A</kbd><kbd>D</kbd> ハンドル<br><kbd>Space</kbd>/<kbd>Shift</kbd> ミニジャンプ→ドリフト（離すとミニターボ）／ジャンプ台から飛び出す瞬間に押す=ジャンプアクション（着地で加速／台の付け根で早めに飛ぶと低空JA／グライダー展開直後にもう一度押すとローグライダー）<br><kbd>E</kbd>/<kbd>Q</kbd> アイテム（押したまま=後ろに保持して盾／離すと発射 ↑前 ↓後ろ／ルーレットは1秒後に押すと早止め）　<kbd>F</kbd>/ゲームパッドX 押している間うしろを見る　<kbd>R</kbd> ジュゲム復帰(コイン-3)<br><kbd>X</kbd>押しながら方向=ソフトドリフト（角度は<kbd>[</kbd><kbd>]</kbd>で0〜44°／アナログは実際のスティック角）　<kbd>C</kbd> カスタム（キャラ・パーツ）　<kbd>H</kbd> ハンドルアシスト（ゲームパッド対応）<br><kbd>T</kbd> タイムアタック切替（コイン再出現なし）　<kbd>Enter</kbd> リスタート<br>角度の目安：0°=最内側／30°=バランス／40°=ソフト／44.5°超=高速MT不可（境界ギリギリは避ける）。スポーツ系バイクはインサイドドリフト<br>地形：草・土(DIRT)はOFが無効で端×0.7→奥×0.3<br>ダート×ミニジャンプ：空中は接地していないので減速なし／着地で再接地。ダートに入る<b>直前</b>に跳ぶと有効（入ってからでは遅い）。空中は地上より遅いのでR連打は不利</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <!-- 3D models (CC-BY-4.0, by Legoshi Fan): Bullet Bill, Coin, Green Shell, Mushroom, Lightning, Bob-omb (https://sketchfab.com/3d-models/bob-omb-73d228b523ee4182ad716aa123cde437) ／ "Mario Shell Red" by Thomas Fugier (CC-BY-4.0) https://sketchfab.com/3d-models/mario-shell-red-76a81ff57398423d80800259c3d48262 ／ "Mario Kart 8 - Mario Kart Stadium" by H,yoshi (CC-BY-4.0) https://sketchfab.com/3d-models/mario-kart-8-mario-kart-stadium-0f489e54bcf04b7da77e138a55f263ad ／ "Mario Kart 8 - Water Park" by H,yoshi (CC-BY-4.0) https://sketchfab.com/3d-models/mario-kart-8-water-park-4c275a06ec464f1ab812662260f5bb8c -->
 <script>/* GLTFLoader (three.js r128, MIT) */
@@ -4099,7 +4102,7 @@ function buildRoadBVH(g){g.updateMatrixWorld(true);const C=WORLD.cfg;const SF=[]
     const pa=o.geometry.attributes.position,ix=o.geometry.index,W=new Float32Array(pa.count*3);
     for(let i=0;i<pa.count;i++){v.fromBufferAttribute(pa,i).applyMatrix4(o.matrixWorld);W[i*3]=v.x;W[i*3+1]=v.y;W[i*3+2]=v.z;}
     const n=ix?ix.count:pa.count;
-    if(road||jpm){for(let i=0;i<W.length;i++)P.push(W[i]);let kept=0;for(let t=0;t<n;t+=3){const i0=(ix?ix.getX(t):t),i1=(ix?ix.getX(t+1):t+1),i2=(ix?ix.getX(t+2):t+2);if(jpm&&!C.jpPick(W,i0*3,i1*3,i2*3))continue;if(C.roadSkip&&C.roadSkip(W,i0*3,i1*3,i2*3))continue;I.push(i0+off,i1+off,i2+off);SF.push(0);WF.push(/water/i.test(mn)&&!/RoadMetal/i.test(mn)?1:0);RF.push(1);DF.push(/^ef_dashboard$/.test(mn)?1:/^ef_glideboard$/.test(mn)?2:/^ef_gravityboard$/.test(mn)?3:0);kept++;}off+=pa.count;nm[mn]=(nm[mn]||0)+kept;}   // roadSkip：ガードレール足元の段差(高さ.23の細い帯)は地面にしない＝接触時に乗り上げるのを防ぐ
+    if(road||jpm){for(let i=0;i<W.length;i++)P.push(W[i]);let kept=0;for(let t=0;t<n;t+=3){const i0=(ix?ix.getX(t):t),i1=(ix?ix.getX(t+1):t+1),i2=(ix?ix.getX(t+2):t+2);if(jpm&&!C.jpPick(W,i0*3,i1*3,i2*3))continue;if(C.roadSkip&&C.roadSkip(W,i0*3,i1*3,i2*3))continue;I.push(i0+off,i1+off,i2+off);SF.push(0);WF.push(/water/i.test(mn)&&!/RoadMetal/i.test(mn)?1:0);RF.push(1);DF.push(/ef_dashboard/.test(mn)?1:/ef_glideboard/.test(mn)?2:/ef_gravityboard/.test(mn)?3:0);kept++;}off+=pa.count;nm[mn]=(nm[mn]||0)+kept;}   // roadSkip：ガードレール足元の段差(高さ.23の細い帯)は地面にしない＝接触時に乗り上げるのを防ぐ
     else for(let t=0;t<n;t+=3){const a=(ix?ix.getX(t):t)*3,b=(ix?ix.getX(t+1):t+1)*3,c=(ix?ix.getX(t+2):t+2)*3,
         e1x=W[b]-W[a],e1y=W[b+1]-W[a+1],e1z=W[b+2]-W[a+2],e2x=W[c]-W[a],e2y=W[c+1]-W[a+1],e2z=W[c+2]-W[a+2],
         nx=e1y*e2z-e1z*e2y,ny=e1z*e2x-e1x*e2z,nz=e1x*e2y-e1y*e2x,l=Math.hypot(nx,ny,nz);
@@ -4373,7 +4376,7 @@ const d3Aim=(o,look)=>{const g=GT[(o.gi+look)%GT.length];return d3Ang(o,g.c.x,g.
 function d3Cam(dt,dist,sh){const o=st;o.CU.lerp(o.U3,1-Math.exp(-dt*5)).normalize();
   o.CF.lerp(o.F3,1-Math.exp(-dt*(dr.active?2.2:6)));o.CF.addScaledVector(o.CU,-o.CF.dot(o.CU));if(o.CF.lengthSq()<1e-6)o.CF.copy(o.F3);o.CF.normalize();
   camera.up.copy(o.CU);const h=3.5+o.y*.4;
-  const lb=HELD.has('KeyF')?-1:1;   // Fキー押している間：後ろを見る
+  const lb=(HELD.has('KeyF')||padBack)?-1:1;   // Fキー押している間：後ろを見る
   camera.position.set(o.P3.x-o.CF.x*dist*lb+o.CU.x*h+(Math.random()-.5)*sh,o.P3.y-o.CF.y*dist*lb+o.CU.y*h+(Math.random()-.5)*sh,o.P3.z-o.CF.z*dist*lb+o.CU.z*h+(Math.random()-.5)*sh);
   const l=1.4+o.y*.5;camera.lookAt(o.P3.x+o.CF.x*5*lb+o.CU.x*l,o.P3.y+o.CF.y*5*lb+o.CU.y*l,o.P3.z+o.CF.z*5*lb+o.CU.z*l);}
 /* ---- ライバルAI：中心線ではなくゲートを目標にする ---- */
@@ -5570,7 +5573,7 @@ function world(dt,bi){
 startCup();setTimeout(openSetup,0);
 
 /* ---------- ドリフト / ミニターボ（MK8DX解析値） ---------- */
-dr.c=0;dr.dsc=0;st.rampT=-1;st.hop=false;st.ja=false;st.rampCool=0;let mtLv=13,assist=false,soft=false,padAx=0,padAy=0,softI=4;const SOFTS=[0,10,20,30,35,40,44];const padPrev={},lerp=(a,b,t)=>a+(b-a)*t;
+dr.c=0;dr.dsc=0;st.rampT=-1;st.hop=false;st.ja=false;st.rampCool=0;let mtLv=13,assist=false,soft=false,padAx=0,padAy=0,padBack=false,softI=4;const SOFTS=[0,10,20,30,35,40,44];const padPrev={},lerp=(a,b,t)=>a+(b-a)*t;
 // MT値Lv6〜20：必要充電量(青/橙/紫)・持続F・ブースト最高速倍率を線形補間（Lv6: 269/568/867・26/82/138F・1.08 ／ Lv20: 200/430/660・40/110/180F・1.15）
 const MTTH=[null,[280,590,900],[278,586,894],[276,582,888],[274,578,882],[272,574,876],[269,568,867],[266,562,858],[263,556,849],[260,550,840],[256,542,828],[252,534,816],[248,526,804],[244,518,792],[240,510,780],[235,500,765],[230,490,750],[223,476,729],[216,462,708],[208,446,684],[200,430,660]];
 function mtP(){return{th:MTTH[clamp(mtLv,1,20)].slice(),dur:[20+mtLv,70+2*mtLv,120+3*mtLv].map(f=>f/60),mul:1.05+.005*mtLv};}
@@ -5626,8 +5629,8 @@ addEventListener('keydown',e=>{if(e.repeat)return;
   if(e.code==='KeyH'){assist=!assist;setMeter();$t(assist?'ハンドルアシストON（ウルトラ不可・充電2/F）':'ハンドルアシストOFF');}
   if(e.code==='KeyX')soft=true;if(e.code==='BracketLeft'||e.code==='BracketRight'){softI=clamp(softI+(e.code==='BracketRight'?1:-1),0,SOFTS.length-1);$t('ソフトドリフト角 '+SOFTS[softI]+'°');}});
 addEventListener('keyup',e=>{if(e.code==='KeyX')soft=false;});
-function pollPad(){const g=navigator.getGamepads?[...navigator.getGamepads()]:[],pd=g.find(x=>x&&x.connected);if(!pd){padAx=0;padAy=0;return;}
-  padAx=Math.abs(pd.axes[0])>.12?pd.axes[0]:0;padAy=Math.abs(pd.axes[1])>.12?pd.axes[1]:0;const b=i=>!!(pd.buttons[i]&&pd.buttons[i].pressed);
+function pollPad(){const g=navigator.getGamepads?[...navigator.getGamepads()]:[],pd=g.find(x=>x&&x.connected);if(!pd){padAx=0;padAy=0;padBack=false;return;}
+  padAx=Math.abs(pd.axes[0])>.12?pd.axes[0]:0;padAy=Math.abs(pd.axes[1])>.12?pd.axes[1]:0;const b=i=>!!(pd.buttons[i]&&pd.buttons[i].pressed);padBack=b(3);   // X(3)：押している間うしろを見る
   const gl=!!(st&&st.glide);   // グライダー中はA/Y(アクセル)・B(ブレーキ)を無効化（上下操作はLスティックが担当）
   const now={up:!gl&&(b(1)||b(2)),down:!gl&&b(0),drift:b(7)||b(5),item:b(6)||b(4)};   // ニンテンドー配置：A(1)・Y(2)=アクセル／B(0)=ブレーキ／ZR(7)・R(5)=ドリフト／ZL(6)・L(4)=アイテム
   for(const k in now){if(now[k]&&!padPrev[k]){if(k==='item')useDown();else{if(k==='drift'&&!GK.drift)pressed=true;if(k==='up')upT=performance.now();GK[k]=1;initAudio();}}
@@ -5742,7 +5745,7 @@ function step(dt){
   // カメラ
   st.camH+=wrap(st.h-st.camH)*Math.min(1,dt*(dr.active?2.2:5.5));
   const bk=(st.boost>0||st.mt>0||st.bill>0||st.star>0)?1:0,dist=7.6+bk*1.4+Math.min(1,sp/MAXV)*.8;
-  const lkb=HELD.has('KeyF')?-1:1,cx=Math.sin(st.camH)*lkb,cz=Math.cos(st.camH)*lkb;   // Fキー押している間：後ろを見る
+  const lkb=(HELD.has('KeyF')||padBack)?-1:1,cx=Math.sin(st.camH)*lkb,cz=Math.cos(st.camH)*lkb;   // Fキー押している間：後ろを見る
   st.shake=Math.max(0,st.shake-dt*1.2);const sh=st.shake*.35+(off?Math.min(1,sp/30)*.05:0);
   if(D3)d3Cam(dt,dist,sh);else{
   {const ct=GH?Math.max(st.gy,GH[gMod(bi-Math.round(dist/(LEN/N)))]):0;if(st.cg===undefined)st.cg=ct;st.cg+=(ct-st.cg)*Math.min(1,dt*10);if(st.cg<ct)st.cg=ct;}
@@ -5750,7 +5753,8 @@ function step(dt){
   camera.lookAt(st.x+cx*5,st.gy+1.4+st.y*.5,st.z+cz*5);
   }
   const tf=68+Math.min(1,sp/MAXV)*8+bk*12;st.fov+=(tf-st.fov)*Math.min(1,dt*5);
-  if(Math.abs(camera.fov-st.fov)>.01){camera.fov=st.fov;camera.updateProjectionMatrix();}
+  {const tf=st.fov*((HELD.has('KeyF')||padBack)?LOOKBACK_FOV:1);   // 後ろを見るときは視野を狭める（LOOKBACK_FOV：1で変化なし／小さいほど狭い）
+  if(Math.abs(camera.fov-tf)>.01){camera.fov=tf;camera.updateProjectionMatrix();}}
   sun.position.set(st.x+60,100+st.gy,st.z+40);sun.target.position.set(st.x,st.gy,st.z);
   // 音
   if(ac){osc.frequency.value=48+sp*3.2+(dr.active?8:0);gain.gain.value=.03+.04*Math.min(1,sp/MAXV)+(K.up?.02:0);}
@@ -5844,7 +5848,7 @@ const SPFX=(()=>{
   }};
 })();
 const MMENU=document.getElementById('mainMenu');   // メニュー表示中はゲームを止める
-const _Yv=new THREE.Vector3(0,1,0);
+const LOOKBACK_FOV=.8,_Yv=new THREE.Vector3(0,1,0);
 /* 3Dコース：地面の法線を取り、オブジェクトを傾斜に合わせて置く。戻り値=法線ベクトル（地面が無ければnull）。 */
 const _gq=new THREE.Quaternion(),_gb=new THREE.Quaternion(),_ge=new THREE.Euler();
 function gNormalAt(x,z,gy){if(!(D3&&RD))return null;if(!rayDn(x,gy||0,z,_Yv,4,8))return null;return{n:new THREE.Vector3(RH.nx,RH.ny,RH.nz).normalize(),x:RH.x,y:RH.y,z:RH.z};}
