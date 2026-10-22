@@ -111,6 +111,7 @@ kbd{background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px;font-famil
 <script>
 /* ★修正のたびに、配列の先頭へ { d:'修正日時', t:'内容' } を1行追加する（新しい順） */
 const UPDATES=[
+{d:'2026-10-22 10:37',t:'ウォーターパークのグライダーパネル端（ゲート104〜114）の手すりに壁判定を追加（路面の端で押し戻す）'},
 {d:'2026-10-22 10:27',t:'グライダーボードに乗った瞬間に初速がつくよう、ボードの位置による判定を追加（名前・路面判定に依らず検出）'},
 {d:'2026-10-22 10:21',t:'グライダーボードの初速の向きを、ボードの角度（面の傾き）と進行方向から決めるよう変更'},
 {d:'2026-10-22 10:06',t:'ウォーターパークのグライダーボードが判定されず、初速・グライダー起動が働かなかった不具合を修正（板の名前の判定を部分一致に）'},
@@ -4312,6 +4313,7 @@ function d3Wall(o,dt){if(!WL)return;const P=o.P3,U=o.U3,F=o.F3,H=D3_WALL_H;o._wt
 
 /* ---- 路面の端の物理壁（ウォーターパーク ゲート36〜80）：レール類のメッシュ壁は使わず、実際の路面の端だけを壁にする ----
    カート周囲6方向の少し先に「平らな路面」があるかを下向きレイで調べ、無ければ壁として押し戻し、外向きの速度成分を消して沿って滑らせる。?noedge で無効化 */
+const D3_EDGE_P0=104,D3_EDGE_P1=114;   // ウォーターパーク：グライダーパネル周辺のゲート範囲（手すりの壁判定を追加）
 const D3_EDGE_ON=!/\bnoedge\b/.test(location.search),D3_EDGE_G0=36,D3_EDGE_G1=80,D3_EDGE_RB=.9,_eh={},_ed=new THREE.Vector3(),_eX=new THREE.Vector3();
 function d3Road1(px,py,pz,U){if(!RD.raycast(px+U.x,py+U.y,pz+U.z,-U.x,-U.y,-U.z,3.4,_eh))return false;
   if(Math.abs(_eh.t-1)>.7)return false;   // 床が高すぎ/低すぎ（縁の立ち上がりなど）は路面とみなさない
@@ -4324,7 +4326,7 @@ function d3EdgeAxis(o){   // 道路の横方向(ゲートから補間)をカー�
   _fw.crossVectors(U,_ex);return true;}   // _ex=道路の横, _fw=走行面内の前後（継ぎ目判定用）
 function d3Road(P,U,dx,dy,dz,d){   // 横方向dの位置に路面があるか：前後0.7ずらした3点のどれかに路面があればあり（継ぎ目・細い隙間は無視）
   for(const f of[0,.7,-.7])if(d3Road1(P.x+dx*d+_fw.x*f,P.y+dy*d+_fw.y*f,P.z+dz*d+_fw.z*f,U))return true;return false;}
-function d3Edge(o,dt){if(!D3_EDGE_ON||!RD||!WORLD)return;if(WORLD.id==='sweet'){d3EdgeSweet(o,dt);return;}if(WORLD.id!=='wp')return;const gi=o.gi;if(!(gi>=D3_EDGE_G0&&gi<=D3_EDGE_G1))return;   // gi未設定(NaN)のカートは対象外
+function d3Edge(o,dt){if(!D3_EDGE_ON||!RD||!WORLD)return;if(WORLD.id==='sweet'){d3EdgeSweet(o,dt);return;}if(WORLD.id!=='wp')return;const gi=o.gi;if(!((gi>=D3_EDGE_G0&&gi<=D3_EDGE_G1)||(gi>=D3_EDGE_P0&&gi<=D3_EDGE_P1))||o.glide)return;   // 反重力区間(36〜80)＋グライダーパネル端(P0〜P1)の手すり。滑空中は対象外。gi未設定(NaN)のカートは対象外
   const P=o.P3,U=o.U3,F=o.F3,sg=o.v<0?-1:1;
   for(let it=0;it<3;it++){let moved=false;if(!d3EdgeAxis(o))return;
     for(const sd of[1,-1]){const dx=_ex.x*sd,dy=_ex.y*sd,dz=_ex.z*sd;
