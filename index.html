@@ -111,6 +111,9 @@ kbd{background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px;font-famil
 <script>
 /* ★修正のたびに、配列の先頭へ { d:'修正日時', t:'内容' } を1行追加する（新しい順） */
 const UPDATES=[
+{d:'2026-10-22 09:48',t:'Fキーを押している間、後ろを見られるようにした（本家のXボタン相当）'},
+{d:'2026-10-22 09:14',t:'キーボードの同時押し処理を修正（↑とW、SpaceとShiftなど、同じ操作の別キーが押されたままのとき片方を離しても操作が途切れない）'},
+{d:'2026-10-22 09:11',t:'グライダー：アナログスティックを斜めに倒しても上下入力が目減りしないよう補正（真下と斜め下で機首上げの強さが同じになる）'},
 {d:'2026-10-22 00:18',t:'グライダーボード（ウォーターパークなど斜めのボード）に乗って初速で飛び出すと、空中でグライダーが起動するよう修正'},
 {d:'2026-10-21 15:53',t:'こうら・ボム兵・ファイアなど、地面を進むアイテムも傾斜に合わせて傾くよう修正'},
 {d:'2026-10-21 13:54',t:'バナナ（設置・投げたもの）とコインが、コースの傾斜（地面の向き）に合わせて傾くよう修正'},
@@ -131,7 +134,7 @@ document.getElementById('mmUpList').innerHTML=UPDATES.map(u=>'<div><time>'+u.d+'
 <canvas id="map" width="150" height="150"></canvas>
 <div id="items"><i id="s0"></i><i id="s1"></i></div><div id="lapbox"><b id="pos">1位</b><b id="lap">LAP 1/3</b><span id="time">0:00.00</span></div><div id="ink"></div><div id="flash"></div><button id="custBtn" onclick="toggleCust()">カスタム (C)</button><div id="cust"></div><div id="cupSel"></div><button id="cupBtn" onclick="toggleCup()">メニュー (V)</button><div id="toast"></div><div id="count"></div><div id="result"></div>
 <div id="hud"><div id="coin"><canvas class="cn" id="cnv" width="64" height="64"></canvas><b id="coinN">0</b><span>/10</span></div><span id="spd">0</span><small>km/h</small><div id="meter"><i></i></div><div id="tot"></div><div id="mtl"></div><div id="dang"></div><canvas id="agauge" width="220" height="70"></canvas><div id="dyaw"></div><div id="dsurf"></div></div>
-<div id="help"><kbd>↑</kbd>/<kbd>W</kbd> アクセル　<kbd>↓</kbd>/<kbd>S</kbd> ブレーキ・バック<br><kbd>←</kbd><kbd>→</kbd>/<kbd>A</kbd><kbd>D</kbd> ハンドル<br><kbd>Space</kbd>/<kbd>Shift</kbd> ミニジャンプ→ドリフト（離すとミニターボ）／ジャンプ台から飛び出す瞬間に押す=ジャンプアクション（着地で加速／台の付け根で早めに飛ぶと低空JA／グライダー展開直後にもう一度押すとローグライダー）<br><kbd>E</kbd>/<kbd>Q</kbd> アイテム（押したまま=後ろに保持して盾／離すと発射 ↑前 ↓後ろ／ルーレットは1秒後に押すと早止め）　<kbd>R</kbd> ジュゲム復帰(コイン-3)<br><kbd>X</kbd>押しながら方向=ソフトドリフト（角度は<kbd>[</kbd><kbd>]</kbd>で0〜44°／アナログは実際のスティック角）　<kbd>C</kbd> カスタム（キャラ・パーツ）　<kbd>H</kbd> ハンドルアシスト（ゲームパッド対応）<br><kbd>T</kbd> タイムアタック切替（コイン再出現なし）　<kbd>Enter</kbd> リスタート<br>角度の目安：0°=最内側／30°=バランス／40°=ソフト／44.5°超=高速MT不可（境界ギリギリは避ける）。スポーツ系バイクはインサイドドリフト<br>地形：草・土(DIRT)はOFが無効で端×0.7→奥×0.3<br>ダート×ミニジャンプ：空中は接地していないので減速なし／着地で再接地。ダートに入る<b>直前</b>に跳ぶと有効（入ってからでは遅い）。空中は地上より遅いのでR連打は不利</div>
+<div id="help"><kbd>↑</kbd>/<kbd>W</kbd> アクセル　<kbd>↓</kbd>/<kbd>S</kbd> ブレーキ・バック<br><kbd>←</kbd><kbd>→</kbd>/<kbd>A</kbd><kbd>D</kbd> ハンドル<br><kbd>Space</kbd>/<kbd>Shift</kbd> ミニジャンプ→ドリフト（離すとミニターボ）／ジャンプ台から飛び出す瞬間に押す=ジャンプアクション（着地で加速／台の付け根で早めに飛ぶと低空JA／グライダー展開直後にもう一度押すとローグライダー）<br><kbd>E</kbd>/<kbd>Q</kbd> アイテム（押したまま=後ろに保持して盾／離すと発射 ↑前 ↓後ろ／ルーレットは1秒後に押すと早止め）　<kbd>F</kbd> 押している間うしろを見る　<kbd>R</kbd> ジュゲム復帰(コイン-3)<br><kbd>X</kbd>押しながら方向=ソフトドリフト（角度は<kbd>[</kbd><kbd>]</kbd>で0〜44°／アナログは実際のスティック角）　<kbd>C</kbd> カスタム（キャラ・パーツ）　<kbd>H</kbd> ハンドルアシスト（ゲームパッド対応）<br><kbd>T</kbd> タイムアタック切替（コイン再出現なし）　<kbd>Enter</kbd> リスタート<br>角度の目安：0°=最内側／30°=バランス／40°=ソフト／44.5°超=高速MT不可（境界ギリギリは避ける）。スポーツ系バイクはインサイドドリフト<br>地形：草・土(DIRT)はOFが無効で端×0.7→奥×0.3<br>ダート×ミニジャンプ：空中は接地していないので減速なし／着地で再接地。ダートに入る<b>直前</b>に跳ぶと有効（入ってからでは遅い）。空中は地上より遅いのでR連打は不利</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <!-- 3D models (CC-BY-4.0, by Legoshi Fan): Bullet Bill, Coin, Green Shell, Mushroom, Lightning, Bob-omb (https://sketchfab.com/3d-models/bob-omb-73d228b523ee4182ad716aa123cde437) ／ "Mario Shell Red" by Thomas Fugier (CC-BY-4.0) https://sketchfab.com/3d-models/mario-shell-red-76a81ff57398423d80800259c3d48262 ／ "Mario Kart 8 - Mario Kart Stadium" by H,yoshi (CC-BY-4.0) https://sketchfab.com/3d-models/mario-kart-8-mario-kart-stadium-0f489e54bcf04b7da77e138a55f263ad ／ "Mario Kart 8 - Water Park" by H,yoshi (CC-BY-4.0) https://sketchfab.com/3d-models/mario-kart-8-water-park-4c275a06ec464f1ab812662260f5bb8c -->
 <script>/* GLTFLoader (three.js r128, MIT) */
@@ -4214,7 +4217,7 @@ function d3Move(o,dt,slip){d3Init(o);const P=o.P3,U=o.U3,F=o.F3;if(!o.fly)o.cann
     if(o.cannon){d3CannonStep(o,dt);}else{
     if(o.glide){const gs=o.gs,KK=(phase==='race')?GK:ZK;let pitch=0;
       if(o===st){const sIn=st.steer||0;rotAbout(F,U,-sIn*gs.move*GLYAW*dt);o.roll+=((sIn*gs.roll*2.4)-o.roll)*Math.min(1,dt*6);
-        pitch=clamp((KK.up?1:0)-(KK.down?1:0)+((phase==='race')?-padAy:0),-1,1);if(GLX.force!=null)pitch=GLX.force;   // 上下は逆：↑＝機首下げ（早く降りる）／↓＝機首上げ（遠くへ・減速）
+        pitch=clamp((KK.up?1:0)-(KK.down?1:0)+((phase==='race')?-(Math.abs(padAx)<.98?clamp(padAy/Math.sqrt(1-padAx*padAx),-1,1):padAy):0),-1,1);if(GLX.force!=null)pitch=GLX.force;   /* アナログ斜め入力の補正：スティックは円形に動くため45°斜めでは上下成分が約0.71に減る。公開資料は斜め入力の垂直成分の換算式を示していない（0.707倍を内部仕様とは断定できない）ため、左右に倒した分で上下が目減りしないよう、横の傾きで割って円周上の上下入力を最大1に戻す（横入力なしの真上/真下は従来通り） */ // 上下は逆：↑＝機首下げ（早く降りる）／↓＝機首上げ（遠くへ・減速）
         if(KK.drift&&!o._dp&&!o.lowDone&&o.air3<.6){o.lowDone=true;o.lowT=.5;$t('ローグライダー');}o._dp=KK.drift;}
       const G=GT.length;let gg=GT[(o.gi+1)%G];for(let q=1;q<=6;q++){const c=GT[(o.gi+q)%G];_t2.subVectors(c.c,P);if(_t2.x*F.x+_t2.z*F.z>0&&_t2.lengthSq()>64){gg=c;break;}}   // 【修正】通過ゲート番号が滑空中に進まず、背後のゲートを基準に引き戻して回り続ける不具合：機体の前方にある最初のゲートを基準にする
       _t2.subVectors(P,gg.c);const lat=_t2.dot(gg.x),ex=(Math.abs(lat)-gg.hw*.6)/(gg.hw*.4);
@@ -4370,8 +4373,9 @@ const d3Aim=(o,look)=>{const g=GT[(o.gi+look)%GT.length];return d3Ang(o,g.c.x,g.
 function d3Cam(dt,dist,sh){const o=st;o.CU.lerp(o.U3,1-Math.exp(-dt*5)).normalize();
   o.CF.lerp(o.F3,1-Math.exp(-dt*(dr.active?2.2:6)));o.CF.addScaledVector(o.CU,-o.CF.dot(o.CU));if(o.CF.lengthSq()<1e-6)o.CF.copy(o.F3);o.CF.normalize();
   camera.up.copy(o.CU);const h=3.5+o.y*.4;
-  camera.position.set(o.P3.x-o.CF.x*dist+o.CU.x*h+(Math.random()-.5)*sh,o.P3.y-o.CF.y*dist+o.CU.y*h+(Math.random()-.5)*sh,o.P3.z-o.CF.z*dist+o.CU.z*h+(Math.random()-.5)*sh);
-  const l=1.4+o.y*.5;camera.lookAt(o.P3.x+o.CF.x*5+o.CU.x*l,o.P3.y+o.CF.y*5+o.CU.y*l,o.P3.z+o.CF.z*5+o.CU.z*l);}
+  const lb=HELD.has('KeyF')?-1:1;   // Fキー押している間：後ろを見る
+  camera.position.set(o.P3.x-o.CF.x*dist*lb+o.CU.x*h+(Math.random()-.5)*sh,o.P3.y-o.CF.y*dist*lb+o.CU.y*h+(Math.random()-.5)*sh,o.P3.z-o.CF.z*dist*lb+o.CU.z*h+(Math.random()-.5)*sh);
+  const l=1.4+o.y*.5;camera.lookAt(o.P3.x+o.CF.x*5*lb+o.CU.x*l,o.P3.y+o.CF.y*5*lb+o.CU.y*l,o.P3.z+o.CF.z*5*lb+o.CU.z*l);}
 /* ---- ライバルAI：中心線ではなくゲートを目標にする ---- */
 function rivalStep3D(r,dt){d3Init(r);
   if(phase!=='count'){
@@ -4716,7 +4720,7 @@ const KEYFB={' ':'Space','Spacebar':'Space','e':'KeyE','E':'KeyE','q':'KeyQ','Q'
 function keyCodeOf(e){return(e.code&&e.code!=='Unidentified')?e.code:(KEYFB[e.key]||e.code);}
 const HELD=new Set();
 addEventListener('keydown',e=>{const c=keyCodeOf(e);if(c==='Space'||c==='KeyE'||c==='KeyQ'||map[c])e.preventDefault();if(paused)return;const k=map[c];const fresh=!HELD.has(c);HELD.add(c);if(!fresh&&!k)return;if(fresh){if(c==='KeyR')recover();if(c==='Enter'||c==='KeyN')nextKey();if(c==='KeyT'){tt=!tt;newRace();}if(c==='KeyE'||c==='KeyQ')useDown();}if(!k)return;if(k==='drift'&&!K.drift)pressed=true;if(k==='up'&&!K.up)upT=performance.now();K[k]=1;initAudio();$('help').style.opacity=.25;});
-addEventListener('keyup',e=>{const c=keyCodeOf(e);HELD.delete(c);const k=map[c];if(!k)return;K[k]=0;if(k==='drift'&&(HELD.has('Space')||HELD.has('ShiftLeft')||HELD.has('ShiftRight')))K.drift=1;});
+addEventListener('keyup',e=>{const c=keyCodeOf(e);HELD.delete(c);const k=map[c];if(!k)return;K[k]=Object.keys(map).some(x=>map[x]===k&&HELD.has(x))?1:0;});   // 同じ操作の別キー(↑とW、Space/Shiftなど)が押されたままなら離したことにしない：複数キーの同時押しを正しく扱う
 addEventListener('blur',()=>{HELD.clear();for(const k in K)K[k]=0;});
 let ac,osc,gain;
 function initAudio(){if(ac)return;try{ac=new(window.AudioContext||window.webkitAudioContext)();osc=ac.createOscillator();osc.type='sawtooth';const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=500;gain=ac.createGain();gain.gain.value=0;osc.connect(f);f.connect(gain);gain.connect(ac.destination);osc.start();}catch(e){ac=null}}
@@ -5738,7 +5742,7 @@ function step(dt){
   // カメラ
   st.camH+=wrap(st.h-st.camH)*Math.min(1,dt*(dr.active?2.2:5.5));
   const bk=(st.boost>0||st.mt>0||st.bill>0||st.star>0)?1:0,dist=7.6+bk*1.4+Math.min(1,sp/MAXV)*.8;
-  const cx=Math.sin(st.camH),cz=Math.cos(st.camH);
+  const lkb=HELD.has('KeyF')?-1:1,cx=Math.sin(st.camH)*lkb,cz=Math.cos(st.camH)*lkb;   // Fキー押している間：後ろを見る
   st.shake=Math.max(0,st.shake-dt*1.2);const sh=st.shake*.35+(off?Math.min(1,sp/30)*.05:0);
   if(D3)d3Cam(dt,dist,sh);else{
   {const ct=GH?Math.max(st.gy,GH[gMod(bi-Math.round(dist/(LEN/N)))]):0;if(st.cg===undefined)st.cg=ct;st.cg+=(ct-st.cg)*Math.min(1,dt*10);if(st.cg<ct)st.cg=ct;}
