@@ -111,6 +111,8 @@ kbd{background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px;font-famil
 <script>
 /* ★修正のたびに、配列の先頭へ { d:'修正日時', t:'内容' } を1行追加する（新しい順） */
 const UPDATES=[
+{d:'2026-10-25 08:51',t:'ジャンプアクション中、着地前に水中⇔地上が切り替わった場合、その状態のジャンプアクション条件（水中=空中ブースト／地上=着地ブースト）へ切り替えるよう変更'},
+{d:'2026-10-24 19:40',t:'ジャンプ台から飛んだジャンプアクションで、実際に接地するまでは空中扱いにし、着地してから加速・ジャンプブーストが出るよう修正'},
 {d:'2026-10-23 01:26',t:'グライダーボードと重なる路面の判定を除外（ボードの範囲内の重なり分のみ）'},
 {d:'2026-10-22 10:48',t:'ウォーターパーク：グライダーパネル区間（ゲート104〜）で地面を離れたら、ボードの検出に関係なくグライダーが開くよう補強'},
 {d:'2026-10-22 10:37',t:'ウォーターパークのグライダーパネル端（ゲート104〜114）の手すりに壁判定を追加（路面の端で押し戻す）'},
@@ -5688,6 +5690,7 @@ function step(dt){
   const air=st.y>0||st.vy>0||(D3&&st.fly&&!st.glide&&(st.ja||st.rampT>=0));   // 3D：ジャンプ台から飛んで車体の高さが0に戻っても、実際に接地するまでは空中扱い（着地してから加速）
   if(st.rampT>=0)st.rampT+=dt;
   /* 水中JA：ニュートラル/左右は空中でブースト発動(着地ブーストより弱い)、上下入力はトリック終了(着地)まで遅延。発動時間0.35秒・弱さ0.6倍は暫定値 */
+  if(st.ja&&air&&!!st.jaWet!==!!(D3&&st.wet)&&!st.jaWB){st.jaWet=!!(D3&&st.wet);st.jaE=0;}   // 着地前に水中⇔地上が変わったら、その状態のJA条件（水中=空中ブースト／地上=着地ブースト）へ切り替え
   if(st.ja){st.jaE=(st.jaE||0)+dt;if(air&&st.jaWet&&!st.jaVert&&!st.jaWB&&st.jaE>=.35){st.jaWB=1;const J=mtTable(st.P.mt);st.mta=J.jumpAcc/J.mtAcc*.6;st.mt=Math.max(st.mt||0,J.jumpLen/60*.6);st.mtm=Math.max(st.mtm||0,1+(J.jumpSpeed-1)*.6);st.shake=.25;blip(260,.15);$t('水中JA：空中ブースト（弱）');}}
   if(pressed){pressed=false;
     if(!st.ja&&K.drift&&((D3&&WORLD&&WORLD.id==='wp'?jpOn(st.P3,22):(D3&&WORLD&&WORLD.id==='sweet'&&(d3GlPanelAhead(st)||jpOnAny(st.P3,JA_PRE)))||rampAhead(bi)<5)||(st.rampT>=0&&st.rampT<.35))){st.ja=true;st.jaT=1;st.jaE=0;st.jaWB=0;st.jaWet=!!(D3&&st.wet);st.jaVert=!!(K.up||K.down);$t('ジャンプアクション！');blip(500,.1);
