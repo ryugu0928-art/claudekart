@@ -4069,7 +4069,7 @@ function d3BuildWalls(g){const FSEEN=new Set(),C=WORLD.cfg,WIN=C.wallIn!=null?C.
       if(typeof D3_GLPANEL!=='undefined'&&W.gates){const ag=W.gates.findIndex(a=>a[11]);if(ag>=0){const a=W.gates[ag],c=[a[0],a[1],a[2]],n=[a[3],a[4],a[5]],u=[a[6],a[7],a[8]],
           x=[u[1]*n[2]-u[2]*n[1],u[2]*n[0]-u[0]*n[2],u[0]*n[1]-u[1]*n[0]],xl=Math.hypot(x[0],x[1],x[2])||1,G=D3_GLPANEL;
         const pt=(f,l)=>[c[0]+n[0]*f+x[0]/xl*l+u[0]*.25,c[1]+n[1]*f+x[1]/xl*l+u[1]*.25,c[2]+n[2]*f+x[2]/xl*l+u[2]*.25];
-        Q.push({p:[pt(-G.jaLead,-G.lat),pt(G.fw0,-G.lat),pt(G.fw0,G.lat),pt(-G.jaLead,G.lat)],c:JPC.pre},{p:[pt(G.fw0,-G.lat),pt(G.fw1,-G.lat),pt(G.fw1,G.lat),pt(G.fw0,G.lat)],c:JPC.gl});}}}
+        const J=(W.id==='thwomp'&&typeof D3_GLJA_TW!=='undefined'&&D3_GLJA_TW.on)?D3_GLJA_TW:null;if(J){const yy=xx=>J.y0+(J.y1-J.y0)*(xx-J.x0)/(J.x1-J.x0)+.15,wq=(za,zb)=>[[J.x0,yy(J.x0),za],[J.x1,yy(J.x1),za],[J.x1,yy(J.x1),zb],[J.x0,yy(J.x0),zb]];Q.push({p:wq(J.z1+J.pre,J.z1),c:JPC.pre},{p:wq(J.z1,J.z0),c:JPC.pad});}else Q.push({p:[pt(-G.jaLead,-G.lat),pt(G.fw0,-G.lat),pt(G.fw0,G.lat),pt(-G.jaLead,G.lat)],c:JPC.pre});Q.push({p:[pt(G.fw0,-G.lat),pt(G.fw1,-G.lat),pt(G.fw1,G.lat),pt(G.fw0,G.lat)],c:JPC.gl});}}}
     else if(W.id==='wp'&&typeof JP_WP!=='undefined'){for(const q of JP_WP){const y=q[4]+.2,rc=(z0,z1,dy)=>[[q[0],y+dy,z0],[q[1],y+dy,z0],[q[1],y+dy,z1],[q[0],y+dy,z1]];
       Q.push({p:rc(q[2]-22,q[2],0),c:JPC.pre},{p:rc(q[2],q[3],0),c:JPC.pad},{p:rc(q[3]-2.5,q[3]+1,.05),c:JPC.lip});}}
     return Q;}
@@ -4213,6 +4213,7 @@ function sense(o,dt){const P=o.P3,U=o.U3,F=o.F3;_X.crossVectors(U,F);let n=0,dn=
   if(_ok[0])P.copy(_pts[0]);else{let hs=0;for(let k=1;k<5;k++)if(_ok[k])hs+=(_pts[k].x-P.x)*U.x+(_pts[k].y-P.y)*U.y+(_pts[k].z-P.z)*U.z;P.addScaledVector(U,hs/n);}   // 中心が隙間のときは位置を保ち、高さだけ車輪から推定
   U.lerp(_n,1-Math.exp(-dt*16)).normalize();F.addScaledVector(U,-F.dot(U)).normalize();return true;}
 /* 【追加】グライダーパネルは「通過すると展開する」仕掛け：段差が低くて接地が切れなくても、パネル(空中ゲート)通過で展開する。調整は D3_GLPANEL */
+const D3_GLJA_TW={on:true,x0:110.14,x1:141.39,z0:206.24,z1:212.09,y0:43.23,y1:59.76,pre:3};   // ドッスンいせきの滑空パネル(PanelFlame枠の実寸)のJA受付範囲(世界座標)。手前(z大側)に pre ぶん余裕。y0/y1=x0/x1端の高さ(F4表示用)
 const D3_GLPANEL={on:true,upR:.3,t:1,minV:3,fw0:-1,fw1:3.7,lat:5.6,jaLead:6};   // fw0/fw1:パネルの前後範囲 lat:パネルの半幅(ゲート基準・見た目の炎メッシュの実寸) jaLead:JA受付の手前距離   // upR:展開時の上向き初速(滑空速度比。ゲーム内の沈下は約0.69倍/秒と速いので低いと即着地する) t:その初速を0へ減衰させつつ接地判定を無視する秒数 minV:展開に必要な最低速度
 function d3GlStart(o){o.glide=true;o.agr=false;o.gs=glFrom(o);o.gv=o.gbFly?Math.max(o.v*.5,Math.hypot(o.V3.x,o.V3.z)):o.v;o.gbFly=false;o._dp=(o===st)&&!!((phase==='race'?GK:ZK).drift);o.lowT=0;o.lowDone=false;o.roll=0;o.gu=0;o.gth=0;o.gvs=0;o._gdy=null;if(o===st)GLLOG.length=0;d3Ev(o,'glide');if(o===st)$t('グライダー展開！ '+o.gs.name+'（'+o.gs.grp+'系・空中速度Lv'+o.gs.sl+'／操作Lv'+o.gs.hl+'）');o._glp=true;if(D3_GLPANEL.on){o._gForce=D3_GLPANEL.t;o.V3.addScaledVector(o.U3,D3_GLPANEL.upR*o.gv);}if(WORLD&&WORLD.id==='sweet'&&D3_CANNON.on)d3CannonStart(o);}   // 展開(通常の接地切れ/パネル通過とも)直後に打ち上げ：低い段差でも即着地しない／スイーツのグライダー板では大砲グライダー
 function d3GlPanel(o){if(!D3_GLPANEL.on||o.glide||o.fell)return;const ag=GT.findIndex(g=>g.air);if(ag<0)return;if(o.gi<ag-2)o._glp=false;
@@ -4226,7 +4227,7 @@ function d3GlPanel(o){if(!D3_GLPANEL.on||o.glide||o.fell)return;const ag=GT.find
    パネルの手前6以内(パネルの幅の中・滑空開始と同じ速度条件)〜滑空開始から0.35秒の間にジャンプボタン(ドリフトキー)を押すとJA成立。
    滑空から着地したときにミニターボが入る(通常のJAと同じ効果)。滑空中はrampT>=0にしてJA状態を保持する。 */
 function d3GlPanelAhead(o){if(!D3_GLPANEL.on||o.glide||o.fell||o.fly||o.v<D3_GLPANEL.minV)return false;const ag=GT.findIndex(g=>g.air);if(ag<0||o.gi!==ag-1)return false;
-  const g=GT[ag];_t2.subVectors(o.P3,g.c);const fw=_t2.dot(g.n);return fw>=-D3_GLPANEL.jaLead&&fw<=0&&Math.abs(_t2.dot(g.x))<=D3_GLPANEL.lat;}
+  const g=GT[ag];if(WORLD&&WORLD.id==='thwomp'&&D3_GLJA_TW.on){const P=o.P3,J=D3_GLJA_TW;return P.x>=J.x0&&P.x<=J.x1&&P.z>=J.z0&&P.z<=J.z1+J.pre;}_t2.subVectors(o.P3,g.c);const fw=_t2.dot(g.n);return fw>=-D3_GLPANEL.jaLead&&fw<=0&&Math.abs(_t2.dot(g.x))<=D3_GLPANEL.lat;}
 function d3JaLand(){const J=mtTable(st.P.mt);if(J.jumpSpeed>=(st.mtm||0))st.mta=J.jumpAcc/J.mtAcc;st.mt=Math.max(st.mt||0,J.jumpLen/60);st.mtm=Math.max(st.mtm||0,J.jumpSpeed);st.shake=.45;blip(260,.25);$t('ジャンプアクション！ '+J.jumpLen+'F ×'+J.jumpSpeed.toFixed(3));st.ja=false;st.rampT=-1;}
 const D3_CANNON={on:true,v:95,rise:45,end:7,lat:7,latRate:14,item:1.6};   // v:飛行速度 rise:弦から頂点までの高さ end:到着点の路面からの高さ lat:横にずらせる最大量 latRate:横移動の速さ item:投げたアイテムの速度倍率
 function d3CannonStart(o){const a=GT[SWEET_AIR],b=GT[SWEET_GAP[1]+1],C=o.cannon={t:0,lat:0,p0:a.c.clone(),p1:b.c.clone()};
@@ -4545,10 +4546,11 @@ function jpOn(P,pre){for(const q of JP_WP){if(P.x>=q[0]&&P.x<=q[1]&&P.z>=q[2]-(p
    A=最後の下り坂の手前の矢印のジャンプ台(ゲート132・メッシュ jumpdai_01/cracker01)。
    台(板)の上と、その手前 JA_PRE だけ受け付け、ジャンプボタン(ドリフトキー)を押すとジャンプアクション(着地でミニターボ)。Aだけ先端で自動ジャンプも行う。 */
 const JP_SW=[[-197.1,-217.8,0.486,0.874,4.1,23.0,-8.5,0],[-16.1,184.7,0.405,0.914,2.6,23.4,27.5,0],[188.7,239.5,-0.137,-0.991,3.6,13.0,10.3,1]],JA_PRE=3;
-const JP_TW=[[126.5, 90.7, 0, -1, 10.8, 20.3, 27.1, 1],[-172.4, 39.64, 0, 1, 1.75, 9.87, -35.8, 0, 3.5],   // B: ひし形広間の出口の段の上端タイル帯(di_Jump 実寸 幅19.7×奥行3.5)
+const JP_TW=[[126.53, 82.41, 0, -1, 2.36, 10.58, 27.3, 1, 3],   // A: ゲート0手前の坂の奥の帯(di_Jump実寸 x115.95〜137.11, z80.05〜84.77)。先端で自動ジャンプ
+  [-172.4, 39.64, 0, 1, 1.75, 9.87, -35.8, 0, 3.5],   // B: ひし形広間の出口の段の上端タイル帯(di_Jump 実寸 幅19.7×奥行3.5)
   /* 追加ゾーン（モデル解析で算出）：[...共通8項目, 高さ許容(省略=6), 手前受付距離(省略=JA_PRE)] */
   [79.54, -180.81, -0.926, -0.378, 1.1, 3.05, -8.2, 0, 4, 3], // C: 芝エリアのランプ上端のタイル帯(di_Jumpの四隅に一致: 幅6.1×奥行2.1)
-  [104.7, 275.4, 0.982, -0.190, 14, 14, 53, 0, 7, 6],       // D: 反重力区間手前の段差ランプ(ゲート98付近)
+  [100.6, 271.75, 0.324, -0.946, 9.54, 2.27, 51.25, 0, 3.8, 3], // D: 反重力区間手前の段(roadA_Moss小片群 長さ19×幅4.5, 高さ48.7〜53.8)
   [-171.07, 122.88, 0, 1, 3.09, 12.7, -38.4, 0, 3.3, 3],    // E: 反重力ボード(PanelFlame_Inside枠 x-183.8〜-158.4, z119.8〜126.0)
   [-222.35, -34.71, 0.402, 0.915, 2.02, 3, -22.9, 0, 8.3, 3, 1],  // F: 壁面の矢印列 左(di_Jump縦板 長さ4.0×高さ14.8)
   [-122.43, -34.71, -0.403, 0.915, 2.02, 3, -22.9, 0, 8.3, 3, 1], // G: 壁面の矢印列 右(同)
