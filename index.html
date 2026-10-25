@@ -4065,7 +4065,7 @@ function d3BuildWalls(g){const FSEEN=new Set(),C=WORLD.cfg,WIN=C.wallIn!=null?C.
     if(W.id==='sweet'||W.id==='thwomp'){
       const JPL=W.id==='thwomp'?JP_TW:JP_SW;if(typeof JPL!=='undefined')for(const q of JPL){const cx=q[0],cz=q[1],fx=q[2],fz=q[3],hl=q[4],hw=q[5],y=q[6]+.2,lx=-fz,lz=fx;
         const rc=(u0,u1,dy)=>[[cx+fx*u0-lx*hw,y+dy,cz+fz*u0-lz*hw],[cx+fx*u1-lx*hw,y+dy,cz+fz*u1-lz*hw],[cx+fx*u1+lx*hw,y+dy,cz+fz*u1+lz*hw],[cx+fx*u0+lx*hw,y+dy,cz+fz*u0+lz*hw]];
-        Q.push({p:rc(-hl-(q[9]||JA_PRE),-hl,0),c:JPC.pre},{p:rc(-hl,hl,0),c:JPC.pad});if(q[7])Q.push({p:rc(hl-2.5,hl+1,.05),c:JPC.lip});}
+        if(q[10]){const y0=q[6]-(q[8]||6),y1=q[6]+(q[8]||6),pr=q[9]||JA_PRE,vq=(u0,u1)=>[[cx+fx*u0,y0,cz+fz*u0],[cx+fx*u1,y0,cz+fz*u1],[cx+fx*u1,y1,cz+fz*u1],[cx+fx*u0,y1,cz+fz*u0]];Q.push({p:vq(-hl-pr,-hl),c:JPC.pre},{p:vq(-hl,hl),c:JPC.pad});}else{Q.push({p:rc(-hl-(q[9]||JA_PRE),-hl,0),c:JPC.pre},{p:rc(-hl,hl,0),c:JPC.pad});if(q[7])Q.push({p:rc(hl-2.5,hl+1,.05),c:JPC.lip});}}
       if(typeof D3_GLPANEL!=='undefined'&&W.gates){const ag=W.gates.findIndex(a=>a[11]);if(ag>=0){const a=W.gates[ag],c=[a[0],a[1],a[2]],n=[a[3],a[4],a[5]],u=[a[6],a[7],a[8]],
           x=[u[1]*n[2]-u[2]*n[1],u[2]*n[0]-u[0]*n[2],u[0]*n[1]-u[1]*n[0]],xl=Math.hypot(x[0],x[1],x[2])||1,G=D3_GLPANEL;
         const pt=(f,l)=>[c[0]+n[0]*f+x[0]/xl*l+u[0]*.25,c[1]+n[1]*f+x[1]/xl*l+u[1]*.25,c[2]+n[2]*f+x[2]/xl*l+u[2]*.25];
@@ -4545,14 +4545,16 @@ function jpOn(P,pre){for(const q of JP_WP){if(P.x>=q[0]&&P.x<=q[1]&&P.z>=q[2]-(p
    A=最後の下り坂の手前の矢印のジャンプ台(ゲート132・メッシュ jumpdai_01/cracker01)。
    台(板)の上と、その手前 JA_PRE だけ受け付け、ジャンプボタン(ドリフトキー)を押すとジャンプアクション(着地でミニターボ)。Aだけ先端で自動ジャンプも行う。 */
 const JP_SW=[[-197.1,-217.8,0.486,0.874,4.1,23.0,-8.5,0],[-16.1,184.7,0.405,0.914,2.6,23.4,27.5,0],[188.7,239.5,-0.137,-0.991,3.6,13.0,10.3,1]],JA_PRE=3;
-const JP_TW=[[126.5, 90.7, 0, -1, 10.8, 20.3, 27.1, 1],[-172.3, 30.6, 0, 1, 10.8, 9.9, -35.9, 0],
+const JP_TW=[[126.5, 90.7, 0, -1, 10.8, 20.3, 27.1, 1],[-172.4, 39.64, 0, 1, 1.75, 9.87, -35.8, 0, 3.5],   // B: ひし形広間の出口の段の上端タイル帯(di_Jump 実寸 幅19.7×奥行3.5)
   /* 追加ゾーン（モデル解析で算出）：[...共通8項目, 高さ許容(省略=6), 手前受付距離(省略=JA_PRE)] */
-  [83.1, -179.4, -0.926, -0.378, 6, 7, -9.5, 0, 5, 6],      // C: 芝エリアのショートカット用ランプ(ゲート16付近)
+  [79.54, -180.81, -0.926, -0.378, 1.1, 3.05, -8.2, 0, 4, 3], // C: 芝エリアのランプ上端のタイル帯(di_Jumpの四隅に一致: 幅6.1×奥行2.1)
   [104.7, 275.4, 0.982, -0.190, 14, 14, 53, 0, 7, 6],       // D: 反重力区間手前の段差ランプ(ゲート98付近)
-  [-171, 127, 0.03, 1, 20, 14, -40, 0, 6, 3],               // E: 反重力ボード手前〜ボード上(ゲート66付近)
-  [-226.5, -43, 0, 1, 10.5, 12, -23, 0, 9, 8],              // F: 壁面の矢印パネル 左(ゲート61付近)
-  [-118.3, -43, 0, 1, 10.5, 12, -23, 0, 9, 8],              // G: 壁面の矢印パネル 右(ゲート51付近)
-  [-181, -309, 0, 1, 18, 9, -27, 0, 10, 3]];                // H: 壁面の縞模様パネル(ゲート39付近)
+  [-171.07, 122.88, 0, 1, 3.09, 12.7, -38.4, 0, 3.3, 3],    // E: 反重力ボード(PanelFlame_Inside枠 x-183.8〜-158.4, z119.8〜126.0)
+  [-222.35, -34.71, 0.402, 0.915, 2.02, 3, -22.9, 0, 8.3, 3, 1],  // F: 壁面の矢印列 左(di_Jump縦板 長さ4.0×高さ14.8)
+  [-122.43, -34.71, -0.403, 0.915, 2.02, 3, -22.9, 0, 8.3, 3, 1], // G: 壁面の矢印列 右(同)
+  /* 縦型ゾーン(q[10]=1)：パネル面(進行方向×高さ)の板。左右の半幅は壁沿い走行ぶんの余裕。F4表示も縦の板になる */
+  [-187.5, -341.86, 0, 1, 2.78, 2.5, -28, 0, 8, 3, 1],      // H1: 壁面の縞模様パネル 入口側(ef_dashboard_Inside/PanelFlame_Inside, ゲート37〜38の先)
+  [-186.87, -294.13, 0.274, 0.962, 2.88, 2.5, -28.4, 0, 7.6, 3, 1]];  // H2: 同 出口側(画像6のパネル)
 /* ↑ ドッスンいせき：[中心x,中心z,進行方向x,進行方向z,前後の半長,左右の半幅,高さ,先端で自動ジャンプ,高さ許容,手前受付距離]。A=ゲート0手前の坂の踏切(di_Jump・z≈22)、B=ひし形広間の出口の段(z≈11) */
 function swPad(P,fn){const JPL=(WORLD&&WORLD.id==='thwomp')?JP_TW:JP_SW;for(const q of JPL){const dx=P.x-q[0],dz=P.z-q[1],u=dx*q[2]+dz*q[3],v=-dx*q[3]+dz*q[2];if(Math.abs(v)<=q[5]&&Math.abs(P.y-q[6])<(q[8]||6)&&fn(u,q[4],q))return true;}return false;}
 function swPadOn(P,pre){return swPad(P,(u,hl,q)=>u>=-hl-(pre?(q[9]||pre):0)&&u<=hl);}
