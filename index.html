@@ -111,6 +111,7 @@ kbd{background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px;font-famil
 <script>
 /* ★修正のたびに、配列の先頭へ { d:'修正日時', t:'内容' } を1行追加する（新しい順） */
 const UPDATES=[
+{d:'2026-10-25 23:00',t:'ドッスンいせき：縁石の壁化を「その場所での縦面の局所的な高さ」で判定するよう変更。低い縁石・段差（局所高さ0.3〜2.5）は壁判定のみ（地面から外す・天面は地面のまま）、背の高い走れる壁（高さ2.5超）は壁判定を付けず地面のままにした。従来はコース半幅の内側に少し入った縁石が除外されたり、高い壁まで壁になっていた'},
 {d:'2026-10-25 22:00',t:'ドッスンいせき：縁石(低い壁)の縦面が壁判定と地面判定の両方に入って挙動不審になる問題を修正。壁にした縦面は路面(地面)判定から外し、天面・斜面だけを地面判定として残した（上には乗れる）。壁化の条件は壁側・路面側で同じ関数(d3CurbWall)を共用'},
 {d:'2026-10-25 21:30',t:'ドッスンいせき：道の端にある背の低い壁（縁石）に乗り上げて越えられる問題を修正。縁石は路面と同じ材質でできており、天面だけが地面判定になって壁判定が無かったため、コース端の急な縦面（路面材質）を壁判定に追加（コース内側の段差は対象外）'},
 {d:'2026-10-25 21:00',t:'ドッスンいせき：水中区間の床に残っていた三角形の穴を修正。大きな三角形(水中の床)は重心が範囲外にあると丸ごと床から漏れていたため、水中の床・斜面・ブロック上面は位置ではなく材質だけで床にするよう変更'},
@@ -4014,18 +4015,36 @@ function d3FrameJG(px,py,pz){mkGates();let best=null;const G=GT.length;
   return best;}
 /* ---- 壁（青い柵・白壁など）の判定用BVH：路面の走行領域に入り込む面は除外して、外側の壁だけを採用 ---- */
 function d3Cut(C,x,y,z){if(!C.cut||y<-20||y>-6)return false;const r=C.cut[Math.round(641.5+z*1.968)];if(!r)return false;const px=463+x*1.96;for(let i=0;i<r.length;i+=2)if(px>=r[i]&&px<=r[i+1])return true;return false;}
-/* 【縁石の壁化(共通判定)】路面と同じ材質でできた縁石・低い壁のうち、壁判定にする三角形か。壁BVH(d3BuildWalls)と路面BVH(d3BuildRoad側のループ)の両方でこの関数を使い、
-   壁にした面は路面(地面)から外す＝壁と地面の二重判定を防ぐ。条件：①コース端(横位置≧半幅-in) ②高さh以上 ③コース面に対して急(傾き<ny) ④走行領域に入り込まない */
-function d3CurbWall(C,W,a,b,c,WIN){const RW=C.wallRoad;if(!RW)return false;
-  const e1x=W[b]-W[a],e1y=W[b+1]-W[a+1],e1z=W[b+2]-W[a+2],e2x=W[c]-W[a],e2y=W[c+1]-W[a+1],e2z=W[c+2]-W[a+2],nx=e1y*e2z-e1z*e2y,ny=e1z*e2x-e1x*e2z,nz=e1x*e2y-e1y*e2x,l=Math.hypot(nx,ny,nz);if(l<1e-12)return false;
-  const cx=(W[a]+W[b]+W[c])/3,cy=(W[a+1]+W[b+1]+W[c+1])/3,cz=(W[a+2]+W[b+2]+W[c+2])/3,f0=d3Frame(cx,cy,cz);
-  if(!f0||Math.abs(f0.lat)<f0.hw-RW.in)return false;
-  const ux=f0.ux,uy=f0.uy,uz=f0.uz,h0=W[a]*ux+W[a+1]*uy+W[a+2]*uz,h1=W[b]*ux+W[b+1]*uy+W[b+2]*uz,h2=W[c]*ux+W[c+1]*uy+W[c+2]*uz;
-  if(Math.max(h0,h1,h2)-Math.min(h0,h1,h2)<RW.h)return false;
-  if(Math.abs(nx*ux+ny*uy+nz*uz)/l>=RW.ny)return false;
-  const pts=[[cx,cy,cz],[W[a],W[a+1],W[a+2]],[W[b],W[b+1],W[b+2]],[W[c],W[c+1],W[c+2]],[(W[a]+W[b])/2,(W[a+1]+W[b+1])/2,(W[a+2]+W[b+2])/2],[(W[b]+W[c])/2,(W[b+1]+W[c+1])/2,(W[b+2]+W[c+2])/2],[(W[c]+W[a])/2,(W[c+1]+W[a+1])/2,(W[c+2]+W[a+2])/2]];
-  for(let pi=0;pi<pts.length;pi++){const fr=d3Frame(pts[pi][0],pts[pi][1],pts[pi][2]);if(fr&&Math.abs(fr.lat)<fr.hw-(pi===0?WIN:WIN+2)&&fr.hgt>.3&&fr.hgt<4)return false;}
-  return true;}
+/* 【縁石の壁化】路面と同じ材質でできた縁石・低い壁を、壁判定にする。壁にした縦面は路面(地面)から外し、天面・斜面は地面のまま残す(上に乗れる)。
+   路面BVH(buildRoadBVH)の先頭で1回だけ計算し、フラグを CURBF(メッシュ→三角形ごとの0/1)に保存して、路面側・壁側の両方が同じ結果を使う(壁と地面の二重判定・抜けを防ぐ)。
+   判定：①コース面に対して急な面(傾き<ny) ②その周囲(半径R)の縦面の【局所的な高さ】がh以上H以下 ③コース断面の筒(半幅)からのはみ出し量ex≧-in(コース内側の段差は対象外)。
+   局所高さがHを超える背の高い壁(走れる壁・バンク)は壁にしない＝地面のまま。連結成分ではなく局所高さで見るのは、縁石の帯が途中で背の高い壁へつながっていても縁石部分を正しく拾うため */
+let CURBF=new Map();
+function d3CurbPrep(g,C){CURBF=new Map();const RW=C.wallRoad;if(!RW)return;
+  const v=new THREE.Vector3(),SV=[],SU=[],SC=[],SM=[],ST=[],FL=[];
+  g.traverse(o=>{if(!o.isMesh||!o.material)return;const mn=C.name(o);if(!RW.re.test(mn)||C.wall(mn))return;
+    const pa=o.geometry.attributes.position,ix=o.geometry.index,n=ix?ix.count:pa.count,W=new Float32Array(pa.count*3);
+    for(let i=0;i<pa.count;i++){v.fromBufferAttribute(pa,i).applyMatrix4(o.matrixWorld);W[i*3]=v.x;W[i*3+1]=v.y;W[i*3+2]=v.z;}
+    const fl=new Uint8Array(Math.ceil(n/3));CURBF.set(o.uuid,fl);const mi=FL.length;FL.push(fl);
+    for(let t=0;t<n;t+=3){const a=(ix?ix.getX(t):t)*3,b=(ix?ix.getX(t+1):t+1)*3,c=(ix?ix.getX(t+2):t+2)*3,
+        e1x=W[b]-W[a],e1y=W[b+1]-W[a+1],e1z=W[b+2]-W[a+2],e2x=W[c]-W[a],e2y=W[c+1]-W[a+1],e2z=W[c+2]-W[a+2],
+        nx=e1y*e2z-e1z*e2y,ny=e1z*e2x-e1x*e2z,nz=e1x*e2y-e1y*e2x,l=Math.hypot(nx,ny,nz);
+      if(l<1e-12||Math.abs(ny)/l>.89)continue;   // 水平に近い面は(コースの傾きが約41°以内なら)急な面ではない＝d3Frameを呼ばずに除外
+      const cx=(W[a]+W[b]+W[c])/3,cy=(W[a+1]+W[b+1]+W[c+1])/3,cz=(W[a+2]+W[b+2]+W[c+2])/3,f=d3Frame(cx,cy,cz);
+      if(!f||f.uy<.75||Math.abs(nx*f.ux+ny*f.uy+nz*f.uz)/l>=RW.ny)continue;   // コースが大きく傾く区間(AG・壁走り等)は対象外
+      SV.push(W[a],W[a+1],W[a+2],W[b],W[b+1],W[b+2],W[c],W[c+1],W[c+2]);SU.push(f.ux,f.uy,f.uz);SC.push(cx,cy,cz);SM.push(mi);ST.push(t/3);}});
+  const N=SM.length,CS=2,K=(x,y,z)=>((Math.floor(x/CS)+1024)*4096+(Math.floor(y/CS)+1024))*4096+(Math.floor(z/CS)+1024),H=new Map();
+  for(let q=0;q<N*3;q++){const k=K(SV[q*3],SV[q*3+1],SV[q*3+2]);let a=H.get(k);if(!a){a=[];H.set(k,a);}a.push(q);}
+  let nf=0;
+  for(let i=0;i<N;i++){const cx=SC[i*3],cy=SC[i*3+1],cz=SC[i*3+2],ux=SU[i*3],uy=SU[i*3+1],uz=SU[i*3+2];let lo=1e9,hi=-1e9;
+    for(let q=0;q<3;q++){const al=(SV[i*9+q*3]-cx)*ux+(SV[i*9+q*3+1]-cy)*uy+(SV[i*9+q*3+2]-cz)*uz;if(al<lo)lo=al;if(al>hi)hi=al;}
+    const ix0=Math.floor(cx/CS),iy0=Math.floor(cy/CS),iz0=Math.floor(cz/CS);
+    for(let dx=-1;dx<=1;dx++)for(let dy=-3;dy<=3;dy++)for(let dz=-1;dz<=1;dz++){const a=H.get(((ix0+dx+1024)*4096+(iy0+dy+1024))*4096+(iz0+dz+1024));if(!a)continue;
+      for(const q of a){const rx=SV[q*3]-cx,ry=SV[q*3+1]-cy,rz=SV[q*3+2]-cz,al=rx*ux+ry*uy+rz*uz,px=rx-al*ux,py=ry-al*uy,pz=rz-al*uz;if(px*px+py*py+pz*pz>RW.R*RW.R)continue;if(al<lo)lo=al;if(al>hi)hi=al;}}
+    const loc=hi-lo;if(loc<RW.h||loc>RW.H)continue;   // 局所高さ：低い縁石・段差だけ(背の高い壁は走れる壁として壁にしない)
+    const j=d3FrameJG(cx,cy,cz);if(!j||j.ex<-RW.in)continue;   // コース内側の段差は壁にしない
+    FL[SM[i]][ST[i]]=1;nf++;}
+  console.info('[stadium] 縁石の壁化',nf,'三角形（急な面',N,'）');}
 function d3BuildWalls(g){const FSEEN=new Set(),C=WORLD.cfg,WIN=C.wallIn!=null?C.wallIn:D3_WALL_IN;WL=null;if(!D3_WALLS)return;g.updateMatrixWorld(true);const v=new THREE.Vector3(),WP=[],WI=[],WK=[];let wn=0,wd=0,wsk=0;
   g.traverse(o=>{if(!o.isMesh||!o.material)return;const mn0=C.name(o),isW=C.wall(mn0),isX=!!(C.wallX&&C.wallX.re.test(mn0)),isR=!!(C.wallRoad&&C.wallRoad.re.test(mn0));if(!isW&&!isX&&!isR)return;   // wallX：範囲限定で追加する壁（ゲート6〜8の赤い手すり・建物入口の青い扉）
     const pa=o.geometry.attributes.position,ix=o.geometry.index,n=ix?ix.count:pa.count,W=new Float32Array(pa.count*3);
@@ -4047,10 +4066,13 @@ function d3BuildWalls(g){const FSEEN=new Set(),C=WORLD.cfg,WIN=C.wallIn!=null?C.
           for(let q=G0;q<=G1;q++){const d=(GT[q].c.x-vx)**2+(GT[q].c.y-vy)**2+(GT[q].c.z-vz)**2;if(d<bd){bd=d;bq=q;}}
           if(bq<0||bd>900)continue;const gx=GT[bq].x,gc=GT[bq].c,lat=(vx-gc.x)*gx.x+(vy-gc.y)*gx.y+(vz-gc.z)*gx.z;
           if(Math.abs(lat)<2)continue;const sg=lat>0?-1:1;W[i*3]+=gx.x*sg*sh;W[i*3+1]+=gx.y*sg*sh;W[i*3+2]+=gx.z*sg*sh;}}}
+    const CK=(isR&&!isW)?(CURBF.get(o.uuid)||null):null;
     for(let t=0;t<n;t+=3){const a=(ix?ix.getX(t):t)*3,b=(ix?ix.getX(t+1):t+1)*3,c=(ix?ix.getX(t+2):t+2)*3,
         e1x=W[b]-W[a],e1y=W[b+1]-W[a+1],e1z=W[b+2]-W[a+2],e2x=W[c]-W[a],e2y=W[c+1]-W[a+1],e2z=W[c+2]-W[a+2],
         nx=e1y*e2z-e1z*e2y,ny=e1z*e2x-e1x*e2z,nz=e1x*e2y-e1y*e2x,l=Math.hypot(nx,ny,nz);
       if(l<1e-12)continue;
+      if(isR&&!isW&&!(CK&&CK[t/3]))continue;   // 路面材質は、縁石と判定された面(d3CurbPrep)だけ壁にする
+      const curb=!!(CK&&CK[t/3]);
       if(PD&&PD.has(pf(pid[a/3]))){const px=(W[a]+W[b]+W[c])/3,py=(W[a+1]+W[b+1]+W[c+1])/3,pz=(W[a+2]+W[b+2]+W[c+2])/3;let bd=1e30,bi=0;
         for(let q=0;q<GT.length;q++){const d=(GT[q].c.x-px)**2+(GT[q].c.y-py)**2+(GT[q].c.z-pz)**2;if(d<bd){bd=d;bi=q;}}
         if(bi>=C.postG[0]&&bi<=C.postG[1]){wsk++;continue;}}   // 支柱(小部品)は壁にしない
@@ -4060,12 +4082,11 @@ function d3BuildWalls(g){const FSEEN=new Set(),C=WORLD.cfg,WIN=C.wallIn!=null?C.
       {const cx=(W[a]+W[b]+W[c])/3,cy=(W[a+1]+W[b+1]+W[c+1])/3,cz=(W[a+2]+W[b+2]+W[c+2])/3;let f0=d3Frame(cx,cy,cz),ux,uy,uz;
         if(f0){ux=f0.ux;uy=f0.uy;uz=f0.uz;}else{let bd=1e30,bg=GT[0];for(const q of GT){const d=(q.c.x-cx)**2+(q.c.y-cy)**2+(q.c.z-cz)**2;if(d<bd){bd=d;bg=q;}}ux=bg.u.x;uy=bg.u.y;uz=bg.u.z;}
         const RW=(isR&&!isW)?C.wallRoad:null;   // wallRoad：路面と同じ材質でできた縁石・低い壁。コース端(横位置≧半幅-in)の急な縦面(コース面との傾き<ny)で高さh以上のものだけ壁にする(内側の継ぎ目・段差は壁にしない)
-        if(RW&&!d3CurbWall(C,W,a,b,c,WIN))continue;
-        if(Math.abs(nx*ux+ny*uy+nz*uz)/l>=(RW?RW.ny:D3_WALL_NY))continue;}   // 路面の上方向と平行に近い面（床・縁石の天面・傾斜面）は壁にしない（傾いた路面区間でも路面基準で判定）
+                if(Math.abs(nx*ux+ny*uy+nz*uz)/l>=(RW?RW.ny:D3_WALL_NY))continue;}   // 路面の上方向と平行に近い面（床・縁石の天面・傾斜面）は壁にしない（傾いた路面区間でも路面基準で判定）
       const pts=[[(W[a]+W[b]+W[c])/3,(W[a+1]+W[b+1]+W[c+1])/3,(W[a+2]+W[b+2]+W[c+2])/3],[W[a],W[a+1],W[a+2]],[W[b],W[b+1],W[b+2]],[W[c],W[c+1],W[c+2]],
         [(W[a]+W[b])/2,(W[a+1]+W[b+1])/2,(W[a+2]+W[b+2])/2],[(W[b]+W[c])/2,(W[b+1]+W[c+1])/2,(W[b+2]+W[c+2])/2],[(W[c]+W[a])/2,(W[c+1]+W[a+1])/2,(W[c+2]+W[a+2])/2]];
       let bad=false;for(let pi=0;pi<pts.length;pi++){const p=pts[pi],fr=d3Frame(p[0],p[1],p[2]);if(fr&&Math.abs(fr.lat)<fr.hw-(pi===0?WIN:WIN+2)&&fr.hgt>.3&&fr.hgt<4){bad=true;break;}}   // 頂点側の許容を+2：縁に沿う柵が走行領域判定で誤って落ちて隙間になるのを防ぐ（重心は従来どおり）
-      if(bad&&!(C.fence&&C.fence.test(C.name(o)))&&!(C.keepBad&&C.keepBad(C.name(o),pts[0][0],pts[0][1],pts[0][2]))&&!(isX&&!isW)){wd++;continue;}   // keepBad：走行領域内側へ張り出したガードレール(ゲート113〜2のくぼみ)も壁として残す
+      if(bad&&!curb&&!(C.fence&&C.fence.test(C.name(o)))&&!(C.keepBad&&C.keepBad(C.name(o),pts[0][0],pts[0][1],pts[0][2]))&&!(isX&&!isW)){wd++;continue;}   // keepBad：走行領域内側へ張り出したガードレール(ゲート113〜2のくぼみ)も壁として残す
       {const mn=C.name(o);   // 追加分(看板・ポール・ボラード等)：芝・砂は入れる(低い物は壁にしない)が、背の高い障害物は壁にする
         if(C.wallProp.test(mn)&&!C.wallBase.test(mn)){
           const yl=Math.min(W[a+1],W[b+1],W[c+1]),yh=Math.max(W[a+1],W[b+1],W[c+1]),li=W[a+1]===yl?a:(W[b+1]===yl?b:c);let gy=null,dirt=false;
@@ -4132,7 +4153,7 @@ function d3BuildWalls(g){const FSEEN=new Set(),C=WORLD.cfg,WIN=C.wallIn!=null?C.
     setInterval(()=>{if(mode>0&&(!cur||cur.world!==WORLD))apply();},700);}
   if(document.body)init();else addEventListener('DOMContentLoaded',init);})();
 let GBT0=null;
-function buildRoadBVH(g){GBT0=null;g.updateMatrixWorld(true);const C=WORLD.cfg;const SF=[],WF=[],RF=[],DF=[],BN=[],P=[],I=[],nm={};let off=0;const v=new THREE.Vector3(),FT=[];
+function buildRoadBVH(g){GBT0=null;g.updateMatrixWorld(true);const C=WORLD.cfg;d3CurbPrep(g,C);const SF=[],WF=[],RF=[],DF=[],BN=[],P=[],I=[],nm={};let off=0;const v=new THREE.Vector3(),FT=[];
   g.traverse(o=>{if(!o.isMesh||!o.material)return;const mn=C.name(o);
     if(/ef_glideboard/.test(mn)){   // グライダーボードの三角形を位置で記録（名前・路面BVHの重なりに依らず乗ったことを判定するため）
       const pa0=o.geometry.attributes.position,ix0=o.geometry.index,n0=ix0?ix0.count:pa0.count,Q=[];
@@ -4142,7 +4163,7 @@ function buildRoadBVH(g){GBT0=null;g.updateMatrixWorld(true);const C=WORLD.cfg;c
     const pa=o.geometry.attributes.position,ix=o.geometry.index,W=new Float32Array(pa.count*3);
     for(let i=0;i<pa.count;i++){v.fromBufferAttribute(pa,i).applyMatrix4(o.matrixWorld);W[i*3]=v.x;W[i*3+1]=v.y;W[i*3+2]=v.z;}
     const n=ix?ix.count:pa.count;
-    if(road||jpm){for(let i=0;i<W.length;i++)P.push(W[i]);let kept=0;for(let t=0;t<n;t+=3){const i0=(ix?ix.getX(t):t),i1=(ix?ix.getX(t+1):t+1),i2=(ix?ix.getX(t+2):t+2);if(jpm&&!C.jpPick(W,i0*3,i1*3,i2*3))continue;if(C.roadSkip&&C.roadSkip(W,i0*3,i1*3,i2*3))continue;if(C.wallRoad&&C.wallRoad.re.test(mn)&&d3CurbWall(C,W,i0*3,i1*3,i2*3,C.wallIn!=null?C.wallIn:D3_WALL_IN))continue;I.push(i0+off,i1+off,i2+off);SF.push(0);WF.push(/water/i.test(mn)&&!/RoadMetal/i.test(mn)?1:0);RF.push(1);DF.push(/ef_dashboard/.test(mn)?1:/ef_glideboard/.test(mn)?2:/ef_gravityboard/.test(mn)?3:0);BN.push(/ef_glideboard/.test(mn)?1:0);kept++;}off+=pa.count;nm[mn]=(nm[mn]||0)+kept;}   // roadSkip：ガードレール足元の段差(高さ.23の細い帯)は地面にしない＝接触時に乗り上げるのを防ぐ
+    if(road||jpm){for(let i=0;i<W.length;i++)P.push(W[i]);const CKr=CURBF.get(o.uuid);let kept=0;for(let t=0;t<n;t+=3){const i0=(ix?ix.getX(t):t),i1=(ix?ix.getX(t+1):t+1),i2=(ix?ix.getX(t+2):t+2);if(jpm&&!C.jpPick(W,i0*3,i1*3,i2*3))continue;if(C.roadSkip&&C.roadSkip(W,i0*3,i1*3,i2*3))continue;if(CKr&&CKr[t/3])continue;I.push(i0+off,i1+off,i2+off);SF.push(0);WF.push(/water/i.test(mn)&&!/RoadMetal/i.test(mn)?1:0);RF.push(1);DF.push(/ef_dashboard/.test(mn)?1:/ef_glideboard/.test(mn)?2:/ef_gravityboard/.test(mn)?3:0);BN.push(/ef_glideboard/.test(mn)?1:0);kept++;}off+=pa.count;nm[mn]=(nm[mn]||0)+kept;}   // roadSkip：ガードレール足元の段差(高さ.23の細い帯)は地面にしない＝接触時に乗り上げるのを防ぐ
     else for(let t=0;t<n;t+=3){const a=(ix?ix.getX(t):t)*3,b=(ix?ix.getX(t+1):t+1)*3,c=(ix?ix.getX(t+2):t+2)*3,
         e1x=W[b]-W[a],e1y=W[b+1]-W[a+1],e1z=W[b+2]-W[a+2],e2x=W[c]-W[a],e2y=W[c+1]-W[a+1],e2z=W[c+2]-W[a+2],
         nx=e1y*e2z-e1z*e2y,ny=e1z*e2x-e1x*e2z,nz=e1x*e2y-e1y*e2x,l=Math.hypot(nx,ny,nz);
@@ -4670,7 +4691,7 @@ const D3WORLDS={
  thwomp:{id:'thwomp',gates:THWOMP_GATES,sc:3.6,y0:45.28,b64:THWOMP_B64,cfg:{
    name:o=>o.material.name||'',
    road:n=>THWOMP_ROAD.test(n),patch:n=>/ef_gravityboard|ef_glideboard|ef_dashboard/.test(n),floor:n=>THWOMP_GRASS.test(n)||n==='di_Wall_B'||THWOMP_WFLOOR.test(n),dirt:n=>THWOMP_GRASS.test(n),floorWat:/_Water$/,clip:thwompFloorClip,
-   wall:n=>THWOMP_WALL.test(n)&&!THWOMP_ROAD.test(n),wallBase:THWOMP_WALL,wallProp:/^$/,wallSkip:thwompWallSkip,wallRoad:{re:/^di_road[ABC]/,ny:.35,in:2,h:.3}}}
+   wall:n=>THWOMP_WALL.test(n)&&!THWOMP_ROAD.test(n),wallBase:THWOMP_WALL,wallProp:/^$/,wallSkip:thwompWallSkip,wallRoad:{re:/^di_road[ABC]/,ny:.35,in:5,h:.3,H:2.5,R:1.5}}}
 };
 WORLD=D3WORLDS.stad;let curW=null;
 function useWorld(w){if(WORLD===w)return;if(WORLD){WORLD.GT=GT;WORLD.GCV=GCV;WORLD.GLEN=GLEN;WORLD.RD=RD;WORLD.WL=WL;}WORLD=w;GT=w.GT||null;GCV=w.GCV||null;GLEN=w.GLEN||0;RD=w.RD||null;WL=w.WL||null;}
