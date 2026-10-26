@@ -111,6 +111,7 @@ kbd{background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px;font-famil
 <script>
 /* ★修正のたびに、配列の先頭へ { d:'修正日時', t:'内容' } を1行追加する（新しい順） */
 const UPDATES=[
+{d:'2026-10-25 23:30',t:'ドッスンいせき：壁判定と地面判定がまだらに混ざる問題を修正。アンチ重力(AG)区間の走れる壁（*Gravity*材質）は背の高い面を壁にせず地面のままにし、それ以外の路面材質は背の高さの上限をなくして縦面をすべて壁判定に統一（壁の中に残っていた縦の地面判定を解消。高さ2.5超の縦面はコース内側でも壁）。コースの枠が取れない継ぎ目の面も、最寄りゲートで判定して漏れを防いだ'},
 {d:'2026-10-25 23:00',t:'ドッスンいせき：縁石の壁化を「その場所での縦面の局所的な高さ」で判定するよう変更。低い縁石・段差（局所高さ0.3〜2.5）は壁判定のみ（地面から外す・天面は地面のまま）、背の高い走れる壁（高さ2.5超）は壁判定を付けず地面のままにした。従来はコース半幅の内側に少し入った縁石が除外されたり、高い壁まで壁になっていた'},
 {d:'2026-10-25 22:00',t:'ドッスンいせき：縁石(低い壁)の縦面が壁判定と地面判定の両方に入って挙動不審になる問題を修正。壁にした縦面は路面(地面)判定から外し、天面・斜面だけを地面判定として残した（上には乗れる）。壁化の条件は壁側・路面側で同じ関数(d3CurbWall)を共用'},
 {d:'2026-10-25 21:30',t:'ドッスンいせき：道の端にある背の低い壁（縁石）に乗り上げて越えられる問題を修正。縁石は路面と同じ材質でできており、天面だけが地面判定になって壁判定が無かったため、コース端の急な縦面（路面材質）を壁判定に追加（コース内側の段差は対象外）'},
@@ -4018,21 +4019,22 @@ function d3Cut(C,x,y,z){if(!C.cut||y<-20||y>-6)return false;const r=C.cut[Math.r
 /* 【縁石の壁化】路面と同じ材質でできた縁石・低い壁を、壁判定にする。壁にした縦面は路面(地面)から外し、天面・斜面は地面のまま残す(上に乗れる)。
    路面BVH(buildRoadBVH)の先頭で1回だけ計算し、フラグを CURBF(メッシュ→三角形ごとの0/1)に保存して、路面側・壁側の両方が同じ結果を使う(壁と地面の二重判定・抜けを防ぐ)。
    判定：①コース面に対して急な面(傾き<ny) ②その周囲(半径R)の縦面の【局所的な高さ】がh以上H以下 ③コース断面の筒(半幅)からのはみ出し量ex≧-in(コース内側の段差は対象外)。
-   局所高さがHを超える背の高い壁(走れる壁・バンク)は壁にしない＝地面のまま。連結成分ではなく局所高さで見るのは、縁石の帯が途中で背の高い壁へつながっていても縁石部分を正しく拾うため */
+   局所高さがHを超える背の高い壁は、AG(アンチ重力)材質(cap)なら走れる壁として壁にしない＝地面のまま。それ以外の材質は高さの上限なしで壁にする(壁の中に縦の地面判定がまだらに残るのを防ぐ)。連結成分ではなく局所高さで見るのは、縁石の帯が途中で背の高い壁へつながっていても縁石部分を正しく拾うため */
 let CURBF=new Map();
 function d3CurbPrep(g,C){CURBF=new Map();const RW=C.wallRoad;if(!RW)return;
-  const v=new THREE.Vector3(),SV=[],SU=[],SC=[],SM=[],ST=[],FL=[];
+  const v=new THREE.Vector3(),SV=[],SU=[],SC=[],SM=[],ST=[],FL=[],SK=[];
   g.traverse(o=>{if(!o.isMesh||!o.material)return;const mn=C.name(o);if(!RW.re.test(mn)||C.wall(mn))return;
     const pa=o.geometry.attributes.position,ix=o.geometry.index,n=ix?ix.count:pa.count,W=new Float32Array(pa.count*3);
     for(let i=0;i<pa.count;i++){v.fromBufferAttribute(pa,i).applyMatrix4(o.matrixWorld);W[i*3]=v.x;W[i*3+1]=v.y;W[i*3+2]=v.z;}
-    const fl=new Uint8Array(Math.ceil(n/3));CURBF.set(o.uuid,fl);const mi=FL.length;FL.push(fl);
+    const fl=new Uint8Array(Math.ceil(n/3));CURBF.set(o.uuid,fl);const mi=FL.length;FL.push(fl);const cap=(RW.cap&&RW.cap.test(mn))?1:0;
     for(let t=0;t<n;t+=3){const a=(ix?ix.getX(t):t)*3,b=(ix?ix.getX(t+1):t+1)*3,c=(ix?ix.getX(t+2):t+2)*3,
         e1x=W[b]-W[a],e1y=W[b+1]-W[a+1],e1z=W[b+2]-W[a+2],e2x=W[c]-W[a],e2y=W[c+1]-W[a+1],e2z=W[c+2]-W[a+2],
         nx=e1y*e2z-e1z*e2y,ny=e1z*e2x-e1x*e2z,nz=e1x*e2y-e1y*e2x,l=Math.hypot(nx,ny,nz);
       if(l<1e-12||Math.abs(ny)/l>.89)continue;   // 水平に近い面は(コースの傾きが約41°以内なら)急な面ではない＝d3Frameを呼ばずに除外
-      const cx=(W[a]+W[b]+W[c])/3,cy=(W[a+1]+W[b+1]+W[c+1])/3,cz=(W[a+2]+W[b+2]+W[c+2])/3,f=d3Frame(cx,cy,cz);
-      if(!f||f.uy<.75||Math.abs(nx*f.ux+ny*f.uy+nz*f.uz)/l>=RW.ny)continue;   // コースが大きく傾く区間(AG・壁走り等)は対象外
-      SV.push(W[a],W[a+1],W[a+2],W[b],W[b+1],W[b+2],W[c],W[c+1],W[c+2]);SU.push(f.ux,f.uy,f.uz);SC.push(cx,cy,cz);SM.push(mi);ST.push(t/3);}});
+      const cx=(W[a]+W[b]+W[c])/3,cy=(W[a+1]+W[b+1]+W[c+1])/3,cz=(W[a+2]+W[b+2]+W[c+2])/3,f=d3Frame(cx,cy,cz);let ux,uy,uz;
+      if(f){ux=f.ux;uy=f.uy;uz=f.uz;}else{let bd=1e30,bg=GT[0];for(const q of GT){const d=(q.c.x-cx)**2+(q.c.y-cy)**2+(q.c.z-cz)**2;if(d<bd){bd=d;bg=q;}}ux=bg.u.x;uy=bg.u.y;uz=bg.u.z;}   // 枠が取れない継ぎ目の面は最寄りゲートで代用(壁ループと同じ)
+      if(uy<.75||Math.abs(nx*ux+ny*uy+nz*uz)/l>=RW.ny)continue;   // コースが大きく傾く区間は対象外
+      SV.push(W[a],W[a+1],W[a+2],W[b],W[b+1],W[b+2],W[c],W[c+1],W[c+2]);SU.push(ux,uy,uz);SC.push(cx,cy,cz);SM.push(mi);ST.push(t/3);SK.push(cap);}});
   const N=SM.length,CS=2,K=(x,y,z)=>((Math.floor(x/CS)+1024)*4096+(Math.floor(y/CS)+1024))*4096+(Math.floor(z/CS)+1024),H=new Map();
   for(let q=0;q<N*3;q++){const k=K(SV[q*3],SV[q*3+1],SV[q*3+2]);let a=H.get(k);if(!a){a=[];H.set(k,a);}a.push(q);}
   let nf=0;
@@ -4041,8 +4043,8 @@ function d3CurbPrep(g,C){CURBF=new Map();const RW=C.wallRoad;if(!RW)return;
     const ix0=Math.floor(cx/CS),iy0=Math.floor(cy/CS),iz0=Math.floor(cz/CS);
     for(let dx=-1;dx<=1;dx++)for(let dy=-3;dy<=3;dy++)for(let dz=-1;dz<=1;dz++){const a=H.get(((ix0+dx+1024)*4096+(iy0+dy+1024))*4096+(iz0+dz+1024));if(!a)continue;
       for(const q of a){const rx=SV[q*3]-cx,ry=SV[q*3+1]-cy,rz=SV[q*3+2]-cz,al=rx*ux+ry*uy+rz*uz,px=rx-al*ux,py=ry-al*uy,pz=rz-al*uz;if(px*px+py*py+pz*pz>RW.R*RW.R)continue;if(al<lo)lo=al;if(al>hi)hi=al;}}
-    const loc=hi-lo;if(loc<RW.h||loc>RW.H)continue;   // 局所高さ：低い縁石・段差だけ(背の高い壁は走れる壁として壁にしない)
-    const j=d3FrameJG(cx,cy,cz);if(!j||j.ex<-RW.in)continue;   // コース内側の段差は壁にしない
+    const loc=hi-lo,tall=loc>RW.H;if(loc<RW.h||(SK[i]&&tall))continue;   // 局所高さ：細かい段差(h未満)は壁にしない／AG材質の背の高い壁(H超)は走れる壁なので壁にしない
+    if(!tall){const j=d3FrameJG(cx,cy,cz);if(!j||j.ex<-RW.in)continue;}   // 低い段差はコース内側(ex<-in)なら壁にしない。高さH超の縦面は乗り越えられないので位置を問わず壁にする
     FL[SM[i]][ST[i]]=1;nf++;}
   console.info('[stadium] 縁石の壁化',nf,'三角形（急な面',N,'）');}
 function d3BuildWalls(g){const FSEEN=new Set(),C=WORLD.cfg,WIN=C.wallIn!=null?C.wallIn:D3_WALL_IN;WL=null;if(!D3_WALLS)return;g.updateMatrixWorld(true);const v=new THREE.Vector3(),WP=[],WI=[],WK=[];let wn=0,wd=0,wsk=0;
@@ -4691,7 +4693,7 @@ const D3WORLDS={
  thwomp:{id:'thwomp',gates:THWOMP_GATES,sc:3.6,y0:45.28,b64:THWOMP_B64,cfg:{
    name:o=>o.material.name||'',
    road:n=>THWOMP_ROAD.test(n),patch:n=>/ef_gravityboard|ef_glideboard|ef_dashboard/.test(n),floor:n=>THWOMP_GRASS.test(n)||n==='di_Wall_B'||THWOMP_WFLOOR.test(n),dirt:n=>THWOMP_GRASS.test(n),floorWat:/_Water$/,clip:thwompFloorClip,
-   wall:n=>THWOMP_WALL.test(n)&&!THWOMP_ROAD.test(n),wallBase:THWOMP_WALL,wallProp:/^$/,wallSkip:thwompWallSkip,wallRoad:{re:/^di_road[ABC]/,ny:.35,in:5,h:.3,H:2.5,R:1.5}}}
+   wall:n=>THWOMP_WALL.test(n)&&!THWOMP_ROAD.test(n),wallBase:THWOMP_WALL,wallProp:/^$/,wallSkip:thwompWallSkip,wallRoad:{re:/^di_road[ABC]/,ny:.35,in:5,h:.3,H:2.5,R:1.5,cap:/Gravity/}}}
 };
 WORLD=D3WORLDS.stad;let curW=null;
 function useWorld(w){if(WORLD===w)return;if(WORLD){WORLD.GT=GT;WORLD.GCV=GCV;WORLD.GLEN=GLEN;WORLD.RD=RD;WORLD.WL=WL;}WORLD=w;GT=w.GT||null;GCV=w.GCV||null;GLEN=w.GLEN||0;RD=w.RD||null;WL=w.WL||null;}
